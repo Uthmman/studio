@@ -15,16 +15,38 @@ interface SizeSelectorProps {
   onGetEstimate: () => void;
   onBack: () => void;
   categoryName: string;
+  categoryImageURL: string;
+  categoryImageAiHint: string;
 }
 
-export default function SizeSelector({ sizes, currentSelection, onSizeSelect, onGetEstimate, onBack, categoryName }: SizeSelectorProps) {
+export default function SizeSelector({ 
+  sizes, 
+  currentSelection, 
+  onSizeSelect, 
+  onGetEstimate, 
+  onBack, 
+  categoryName,
+  categoryImageURL,
+  categoryImageAiHint 
+}: SizeSelectorProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto shadow-xl">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl font-semibold tracking-tight text-foreground">Select Size for Your {categoryName}</CardTitle>
         <CardDescription className="text-muted-foreground mt-2">Choose the appropriate size or dimensions.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-8 p-6">
+      <CardContent className="p-6">
+        <div className="relative aspect-video w-full overflow-hidden rounded-md mb-6 border">
+            <Image
+              src={categoryImageURL}
+              alt={`${categoryName} representative image`}
+              fill
+              style={{ objectFit: 'cover' }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              data-ai-hint={categoryImageAiHint}
+              priority
+            />
+        </div>
         <div className="space-y-3 p-4 border rounded-lg shadow-sm bg-background">
           <Label htmlFor="size-selection" className="text-lg font-medium text-foreground">Available Sizes</Label>
           <RadioGroup
@@ -39,31 +61,17 @@ export default function SizeSelector({ sizes, currentSelection, onSizeSelect, on
                 <Label
                   key={size.id}
                   htmlFor={`size-${size.id}`}
-                  className="flex flex-col p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary space-y-2"
+                  className="flex items-center space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
                 >
-                  <div className="flex items-center space-x-3">
-                    <RadioGroupItem value={size.id} id={`size-${size.id}`} />
-                    <IconComponent className="h-5 w-5 text-current" />
-                    <span>{size.label}</span>
-                  </div>
-                  {size.imagePlaceholder && (
-                    <div className="relative w-full h-24 mt-2 rounded-md overflow-hidden border">
-                      <Image
-                        src={size.imagePlaceholder}
-                        alt={size.label}
-                        fill
-                        style={{ objectFit: 'cover' }}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                        data-ai-hint={size.imageAiHint || size.label.toLowerCase()}
-                      />
-                    </div>
-                  )}
+                  <RadioGroupItem value={size.id} id={`size-${size.id}`} />
+                  <IconComponent className="h-5 w-5 text-current" />
+                  <span>{size.label}</span>
                 </Label>
               );
             })}
           </RadioGroup>
         </div>
-        <div className="flex justify-between pt-6">
+        <div className="flex justify-between pt-6 mt-8">
           <Button variant="outline" onClick={onBack}>Back to Features</Button>
           <Button onClick={onGetEstimate} disabled={!currentSelection}>
             Get Price Estimate

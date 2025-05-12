@@ -8,7 +8,7 @@ import FeatureSelector from '@/components/furniture-estimator/feature-selector';
 import SizeSelector from '@/components/furniture-estimator/size-selector';
 import PriceDisplay from '@/components/furniture-estimator/price-display';
 import StepIndicator from '@/components/furniture-estimator/step-indicator';
-import Header from '@/components/layout/header'; // Assuming Header is desired
+import Header from '@/components/layout/header'; 
 
 const initialSelections: UserSelections = {
   categoryId: null,
@@ -19,7 +19,7 @@ const initialSelections: UserSelections = {
 export default function FurnitureEstimatorPage() {
   const [step, setStep] = useState<Step>('category');
   const [selections, setSelections] = useState<UserSelections>(initialSelections);
-  const [estimatedPriceData, setEstimatedPriceData] = useState<{priceRange: PriceRange, description: string} | null>(null);
+  const [estimatedPriceData, setEstimatedPriceData] = useState<{priceRange: PriceRange | null, description: string} | null>(null);
 
   const currentCategoryData = useMemo(() => {
     if (!selections.categoryId) return null;
@@ -29,13 +29,13 @@ export default function FurnitureEstimatorPage() {
   const handleCategorySelect = useCallback((categoryId: string) => {
     setSelections({
       categoryId,
-      featureSelections: {}, // Reset features when category changes
-      sizeId: null,          // Reset size when category changes
+      featureSelections: {}, 
+      sizeId: null,          
     });
     const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
     if (category) {
       if (category.features.length === 0) {
-        setStep('size'); // Skip feature selection if no features
+        setStep('size'); 
       } else {
         setStep('features');
       }
@@ -57,12 +57,12 @@ export default function FurnitureEstimatorPage() {
   }, []);
   
   const handleBackToCategory = useCallback(() => {
-    setSelections(prev => ({...initialSelections, categoryId: null})); // Full reset to category selection
+    setSelections(prev => ({...initialSelections, categoryId: null})); 
     setStep('category');
   }, []);
 
   const handleBackToFeatures = useCallback(() => {
-     setSelections(prev => ({...prev, sizeId: null})); // Clear size selection
+     setSelections(prev => ({...prev, sizeId: null})); 
      setStep('features');
   }, []);
 
@@ -76,11 +76,7 @@ export default function FurnitureEstimatorPage() {
     const priceEntry = getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId);
     const description = generateItemDescription(selections, FURNITURE_CATEGORIES);
     
-    if (priceEntry) {
-        setEstimatedPriceData({priceRange: priceEntry.priceRange, description});
-    } else {
-        setEstimatedPriceData({priceRange: null, description } as any); // Cast to handle null priceRange
-    }
+    setEstimatedPriceData({priceRange: priceEntry?.priceRange || null, description});
     setStep('result');
   }, [selections]);
 
@@ -104,6 +100,8 @@ export default function FurnitureEstimatorPage() {
             onNext={handleProceedToSize}
             onBack={handleBackToCategory}
             categoryName={currentCategoryData.name}
+            categoryImageURL={currentCategoryData.imagePlaceholder}
+            categoryImageAiHint={currentCategoryData.imageAiHint}
           />
         );
       case 'size':
@@ -116,6 +114,8 @@ export default function FurnitureEstimatorPage() {
             onGetEstimate={handleGetEstimate}
             onBack={currentCategoryData.features.length > 0 ? handleBackToFeatures : handleBackToCategory}
             categoryName={currentCategoryData.name}
+            categoryImageURL={currentCategoryData.imagePlaceholder}
+            categoryImageAiHint={currentCategoryData.imageAiHint}
           />
         );
       case 'result':
