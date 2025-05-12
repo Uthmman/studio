@@ -70,39 +70,56 @@ export function useEstimationStorage() {
       name: name || data.description,
     };
 
+    let wasDuplicate = false;
+    let itemAdded = false;
+
     setSavedEstimates(prevSaved => {
-      // Check if an item with the same name (if provided) or description already exists
       const existingItemIndex = prevSaved.findIndex(item => 
-        (name && item.name === name) || (!name && item.description === newSavedItem.description)
+        (newSavedItem.name && item.name === newSavedItem.name) || (!newSavedItem.name && item.description === newSavedItem.description)
       );
 
-      let updatedSaved;
       if (existingItemIndex > -1) {
-        // Optional: Update existing if found, or prevent duplicate. For now, let's just add.
-        // Or, inform user: toast({ title: "Already Saved", description: "An estimate with this name/description already exists."}); return prevSaved;
-        updatedSaved = [...prevSaved]; // No change if duplicate found and we decide to prevent
-         toast({ title: "Already Saved", description: `An estimate similar to "${newSavedItem.name}" is already saved.`, variant: "default" });
-         return updatedSaved; // Exit without adding
+        wasDuplicate = true;
+        // No change if duplicate found, but ensure localStorage reflects current state if it was somehow out of sync.
+        // This typically isn't strictly necessary if prevSaved is always accurate.
+        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, prevSaved); 
+        return prevSaved; 
       } else {
-         updatedSaved = [newSavedItem, ...prevSaved];
-         toast({ title: "Estimate Saved", description: `"${newSavedItem.name}" has been saved.` });
+        const updatedSaved = [newSavedItem, ...prevSaved];
+        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, updatedSaved);
+        itemAdded = true;
+        return updatedSaved;
       }
-      
-      safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, updatedSaved);
-      return updatedSaved;
     });
+
+    if (wasDuplicate) {
+      toast({ title: "Already Saved", description: `An estimate similar to "${newSavedItem.name}" is already saved.`, variant: "default" });
+    } else if (itemAdded) {
+      toast({ title: "Estimate Saved", description: `"${newSavedItem.name}" has been saved.` });
+    }
   }, [toast]);
 
   const deleteSavedEstimate = useCallback((id: string) => {
+    let itemWasDeleted = false;
+    let deletedItemName = "Estimate"; // Default name
+
     setSavedEstimates(prevSaved => {
-      const itemToDelete = prevSaved.find(item => item.id === id);
+      const itemIndex = prevSaved.findIndex(item => item.id === id);
+      if (itemIndex === -1) {
+        // Item not found, no change
+        return prevSaved;
+      }
+      
+      deletedItemName = prevSaved[itemIndex].name || prevSaved[itemIndex].description;
       const updatedSaved = prevSaved.filter(item => item.id !== id);
       safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, updatedSaved);
-      if (itemToDelete) {
-        toast({ title: "Estimate Deleted", description: `"${itemToDelete.name || itemToDelete.description}" has been removed.` });
-      }
+      itemWasDeleted = true;
       return updatedSaved;
     });
+
+    if (itemWasDeleted) {
+      toast({ title: "Estimate Deleted", description: `"${deletedItemName}" has been removed.` });
+    }
   }, [toast]);
   
   const clearHistory = useCallback(() => {
