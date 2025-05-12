@@ -14,34 +14,34 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
         id: 'sofas-feat-seats',
         name: 'Number of Seats',
         options: [
-          { id: 'sofas-feat-seats-opt-2', label: '2-Seater' },
-          { id: 'sofas-feat-seats-opt-3', label: '3-Seater' },
-          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional' },
+          { id: 'sofas-feat-seats-opt-2', label: '2-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/100/80', imageAiHint: 'small sofa' },
+          { id: 'sofas-feat-seats-opt-3', label: '3-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'medium sofa' },
+          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional', iconName: 'GalleryVerticalEnd', imagePlaceholder: 'https://picsum.photos/150/100', imageAiHint: 'large sofa' },
         ],
       },
       {
         id: 'sofas-feat-material',
         name: 'Upholstery Material',
         options: [
-          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric' },
-          { id: 'sofas-feat-material-opt-leather', label: 'Leather' },
-          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet' },
+          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric', iconName: 'GalleryThumbnails', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'fabric texture' },
+          { id: 'sofas-feat-material-opt-leather', label: 'Leather', iconName: 'Option', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'leather texture' },
+          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet', iconName: 'Sparkles', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'velvet texture' },
         ],
       },
       {
         id: 'sofas-feat-style',
         name: 'Style',
         options: [
-          { id: 'sofas-feat-style-opt-modern', label: 'Modern' },
-          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional' },
-          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century' },
+          { id: 'sofas-feat-style-opt-modern', label: 'Modern', iconName: 'Zap', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'modern design' },
+          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional', iconName: 'Grape', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'classic design' },
+          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century', iconName: 'Sun', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'retro design' },
         ],
       },
     ],
     sizes: [
-      { id: 'sofas-size-small', label: 'Small (50-69 inches)' },
-      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)' },
-      { id: 'sofas-size-large', label: 'Large (86+ inches)' },
+      { id: 'sofas-size-small', label: 'Small (50-69 inches)', iconName: 'Minimize2', imagePlaceholder: 'https://picsum.photos/80/60', imageAiHint: 'compact furniture' },
+      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)', iconName: 'AppWindow', imagePlaceholder: 'https://picsum.photos/100/75', imageAiHint: 'standard furniture' },
+      { id: 'sofas-size-large', label: 'Large (86+ inches)', iconName: 'Maximize2', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'spacious furniture' },
     ],
   },
   {
@@ -55,25 +55,25 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
         id: 'tables-feat-shape',
         name: 'Shape',
         options: [
-          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular' },
-          { id: 'tables-feat-shape-opt-round', label: 'Round' },
-          { id: 'tables-feat-shape-opt-square', label: 'Square' },
+          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular', iconName: 'RectangleHorizontal', imagePlaceholder: 'https://picsum.photos/100/70', imageAiHint: 'rectangle table' },
+          { id: 'tables-feat-shape-opt-round', label: 'Round', iconName: 'Circle', imagePlaceholder: 'https://picsum.photos/90/90', imageAiHint: 'round table' },
+          { id: 'tables-feat-shape-opt-square', label: 'Square', iconName: 'Square', imagePlaceholder: 'https://picsum.photos/80/80', imageAiHint: 'square table' },
         ],
       },
       {
         id: 'tables-feat-material',
         name: 'Table Material',
         options: [
-          { id: 'tables-feat-material-opt-wood', label: 'Wood' },
-          { id: 'tables-feat-material-opt-glass', label: 'Glass' },
-          { id: 'tables-feat-material-opt-metal', label: 'Metal' },
+          { id: 'tables-feat-material-opt-wood', label: 'Wood', iconName: 'TreeDeciduous', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'wood grain' },
+          { id: 'tables-feat-material-opt-glass', label: 'Glass', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'glass surface' }, // Placeholder icon, MinusSquare is not ideal
+          { id: 'tables-feat-material-opt-metal', label: 'Metal', iconName: 'Settings2', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'metal surface' }, // Placeholder icon
         ],
       },
     ],
     sizes: [
-      { id: 'tables-size-2-4', label: '2-4 Person' },
-      { id: 'tables-size-4-6', label: '4-6 Person' },
-      { id: 'tables-size-6-8', label: '6-8 Person' },
+      { id: 'tables-size-2-4', label: '2-4 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/80/60', imageAiHint: 'small group' },
+      { id: 'tables-size-4-6', label: '4-6 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/100/75', imageAiHint: 'medium group' },
+      { id: 'tables-size-6-8', label: '6-8 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'large group' },
     ],
   },
   {
@@ -87,25 +87,25 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
         id: 'beds-feat-frame',
         name: 'Frame Material',
         options: [
-          { id: 'beds-feat-frame-opt-wood', label: 'Wood' },
-          { id: 'beds-feat-frame-opt-metal', label: 'Metal' },
-          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered' },
+          { id: 'beds-feat-frame-opt-wood', label: 'Wood', iconName: 'Construction', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'wood frame' },
+          { id: 'beds-feat-frame-opt-metal', label: 'Metal', iconName: 'Shield', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'metal frame' }, // Placeholder icon
+          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered', iconName: 'Pillow', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'fabric frame' },
         ],
       },
       {
         id: 'beds-feat-headboard',
         name: 'Headboard',
         options: [
-          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard' },
-          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard' },
+          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard', iconName: 'SquareArrowUp', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'bed headboard' },
+          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'simple bed' },
         ],
       },
     ],
     sizes: [
-      { id: 'beds-size-twin', label: 'Twin' },
-      { id: 'beds-size-full', label: 'Full' },
-      { id: 'beds-size-queen', label: 'Queen' },
-      { id: 'beds-size-king', label: 'King' },
+      { id: 'beds-size-twin', label: 'Twin', iconName: 'BedSingle', imagePlaceholder: 'https://picsum.photos/80/120', imageAiHint: 'single bed' },
+      { id: 'beds-size-full', label: 'Full', iconName: 'Bed', imagePlaceholder: 'https://picsum.photos/100/120', imageAiHint: 'double bed' },
+      { id: 'beds-size-queen', label: 'Queen', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/120/120', imageAiHint: 'queen size' },
+      { id: 'beds-size-king', label: 'King', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/140/120', imageAiHint: 'king size' }, // Using BedDouble, might need more distinct icons
     ],
   },
 ];
@@ -207,9 +207,12 @@ export const addOptionToFeature = (categoryId: string, featureId: string, option
   if (category) {
     const feature = category.features.find(f => f.id === featureId);
     if (feature) {
-      const newOption: FurnitureFeatureOption = {
+      const newOption: FurnitureFeatureOption = { // Ensure all fields are initialized
         ...optionData,
         id: generateId(`${featureId}-opt`),
+        iconName: optionData.iconName || '', // provide default
+        imagePlaceholder: optionData.imagePlaceholder || 'https://picsum.photos/50/50', // provide default
+        imageAiHint: optionData.imageAiHint || '', // provide default
       };
       feature.options.push(newOption);
       return newOption;
@@ -225,8 +228,13 @@ export const updateOptionInFeature = (categoryId: string, featureId: string, upd
     if (feature) {
       const optionIndex = feature.options.findIndex(o => o.id === updatedOption.id);
       if (optionIndex !== -1) {
-        feature.options[optionIndex] = updatedOption;
-        return updatedOption;
+        feature.options[optionIndex] = {
+            ...feature.options[optionIndex], // preserve existing fields
+            ...updatedOption, // overwrite with new data
+            imagePlaceholder: updatedOption.imagePlaceholder || 'https://picsum.photos/50/50',
+            imageAiHint: updatedOption.imageAiHint || updatedOption.label.toLowerCase(),
+        };
+        return feature.options[optionIndex];
       }
     }
   }
@@ -257,9 +265,12 @@ export const deleteOptionFromFeature = (categoryId: string, featureId: string, o
 export const addSizeToCategory = (categoryId: string, sizeData: Omit<FurnitureSizeConfig, 'id'>): FurnitureSizeConfig | null => {
   const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
   if (category) {
-    const newSize: FurnitureSizeConfig = {
+    const newSize: FurnitureSizeConfig = { // Ensure all fields are initialized
       ...sizeData,
       id: generateId(`${categoryId}-size`),
+      iconName: sizeData.iconName || '', // provide default
+      imagePlaceholder: sizeData.imagePlaceholder || 'https://picsum.photos/80/80', // provide default
+      imageAiHint: sizeData.imageAiHint || '', // provide default
     };
     category.sizes.push(newSize);
     return newSize;
@@ -272,8 +283,13 @@ export const updateSizeInCategory = (categoryId: string, updatedSize: FurnitureS
   if (category) {
     const sizeIndex = category.sizes.findIndex(s => s.id === updatedSize.id);
     if (sizeIndex !== -1) {
-      category.sizes[sizeIndex] = updatedSize;
-      return updatedSize;
+      category.sizes[sizeIndex] = {
+          ...category.sizes[sizeIndex],
+          ...updatedSize,
+          imagePlaceholder: updatedSize.imagePlaceholder || 'https://picsum.photos/80/80',
+          imageAiHint: updatedSize.imageAiHint || updatedSize.label.toLowerCase(),
+      };
+      return category.sizes[sizeIndex];
     }
   }
   return null;

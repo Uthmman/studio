@@ -24,6 +24,8 @@ import FeatureFormDialog from "./feature-form-dialog";
 import SizeFormDialog from "./size-form-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { generateId } from "@/lib/utils";
+import Image from "next/image";
+import * as LucideIcons from "lucide-react";
 
 
 const categorySchema = z.object({
@@ -92,10 +94,9 @@ export default function CategoryFormDialog({
   }, [initialData, resetCategoryForm, isOpen]);
 
   const handleFullSubmit = (data: CategoryFormData) => {
-     if (features.length === 0 && initialData?.id !== 'tables') { // Example: tables might not need features
-        // This check can be made more generic if needed
-        // toast({ title: "Validation Error", description: "A category should ideally have at least one feature.", variant: "destructive" });
-        // return;
+     if (features.length === 0 && initialData?.id !== 'tables' && data.name.toLowerCase() !== 'dining tables') { 
+        // Allow no features for tables, otherwise warn (but don't block yet)
+        // toast({ title: "Info", description: "Consider adding at least one feature for better customization.", variant: "default" });
      }
      if (sizes.length === 0) {
         toast({ title: "Validation Error", description: "A category must have at least one size option.", variant: "destructive" });
@@ -105,8 +106,8 @@ export default function CategoryFormDialog({
     const completeCategoryData: FurnitureCategory = {
       id: initialData?.id || generateId('cat'), // Use existing ID or generate new
       ...data,
-      imagePlaceholder: data.imagePlaceholder || 'https://picsum.photos/400/300', // Default placeholder
-      imageAiHint: data.imageAiHint || data.name.toLowerCase(), // Default AI hint
+      imagePlaceholder: data.imagePlaceholder || 'https://picsum.photos/400/300', 
+      imageAiHint: data.imageAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(" "), 
       features,
       sizes,
     };
@@ -127,12 +128,28 @@ export default function CategoryFormDialog({
     setFeatures(prev => prev.filter(f => f.id !== featureId));
     toast({ title: "Feature Deleted", description: "The feature and its options have been removed from this category."});
   };
-  const handleFeatureFormSubmit = useCallback((data: { name: string }, featureOptions: FurnitureFeatureOption[], featureIdToUpdate?: string) => {
+  const handleFeatureFormSubmit = useCallback((
+    data: { name: string }, 
+    featureOptions: FurnitureFeatureOption[], 
+    featureIdToUpdate?: string
+  ) => {
+    const completeOptions = featureOptions.map(opt => ({
+        ...opt,
+        id: opt.id.startsWith('temp-') ? generateId('opt') : opt.id,
+        iconName: opt.iconName || "",
+        imagePlaceholder: opt.imagePlaceholder || "https://picsum.photos/50/50",
+        imageAiHint: opt.imageAiHint || opt.label.toLowerCase().split(" ").slice(0,2).join(" ")
+    }));
+
     if (featureIdToUpdate) {
-      setFeatures(prev => prev.map(f => f.id === featureIdToUpdate ? { ...f, name: data.name, options: featureOptions } : f));
+      setFeatures(prev => prev.map(f => f.id === featureIdToUpdate ? { ...f, name: data.name, options: completeOptions } : f));
       toast({ title: "Feature Updated", description: "The feature has been successfully updated."});
     } else {
-      const newFeature: FurnitureFeatureConfig = { id: generateId('feat'), name: data.name, options: featureOptions.map(opt => ({...opt, id: opt.id.startsWith('temp-') ? generateId('opt') : opt.id })) };
+      const newFeature: FurnitureFeatureConfig = { 
+          id: generateId('feat'), 
+          name: data.name, 
+          options: completeOptions
+      };
       setFeatures(prev => [...prev, newFeature]);
       toast({ title: "Feature Added", description: "The feature has been added to this category."});
     }
@@ -153,12 +170,22 @@ export default function CategoryFormDialog({
     setSizes(prev => prev.filter(s => s.id !== sizeId));
     toast({ title: "Size Deleted", description: "The size option has been removed."});
   };
-  const handleSizeFormSubmit = useCallback((data: { label: string }, sizeIdToUpdate?: string) => {
+  const handleSizeFormSubmit = useCallback((
+    data: { label: string; iconName?: string; imagePlaceholder?: string; imageAiHint?: string }, 
+    sizeIdToUpdate?: string
+  ) => {
+     const completeSizeData = {
+        ...data,
+        iconName: data.iconName || "",
+        imagePlaceholder: data.imagePlaceholder || "https://picsum.photos/80/80",
+        imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0,2).join(" ")
+     };
+
     if (sizeIdToUpdate) {
-      setSizes(prev => prev.map(s => s.id === sizeIdToUpdate ? { ...s, ...data } : s));
+      setSizes(prev => prev.map(s => s.id === sizeIdToUpdate ? { ...s, ...completeSizeData } : s));
       toast({ title: "Size Updated", description: "The size option has been successfully updated."});
     } else {
-      const newSize: FurnitureSizeConfig = { id: generateId('size'), ...data };
+      const newSize: FurnitureSizeConfig = { id: generateId('size'), ...completeSizeData };
       setSizes(prev => [...prev, newSize]);
       toast({ title: "Size Added", description: "The size option has been added to this category."});
     }
@@ -177,7 +204,7 @@ export default function CategoryFormDialog({
             Manage the category details, its features, and available sizes.
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(80vh-100px)] pr-6"> {/* Adjusted max height and added padding for scrollbar */}
+        <ScrollArea className="max-h-[calc(80vh-100px)] pr-6"> 
           <form onSubmit={handleCategorySubmit(handleFullSubmit)} className="space-y-6 py-4">
             <Card>
               <CardHeader>
@@ -234,8 +261,28 @@ export default function CategoryFormDialog({
                               <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteFeature(feature.id)} title="Delete feature" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           </div>
-                          <ul className="list-disc list-inside pl-2 space-y-1">
-                            {feature.options.map(opt => <li key={opt.id} className="text-sm text-muted-foreground">{opt.label}</li>)}
+                          <ul className="list-none pl-0 space-y-2">
+                            {feature.options.map(opt => {
+                              const OptIcon = opt.iconName ? (LucideIcons as any)[opt.iconName] || null : null;
+                              return (
+                                <li key={opt.id} className="text-sm text-muted-foreground flex items-center space-x-2 p-1 bg-background/50 rounded">
+                                  {OptIcon && <OptIcon className="h-4 w-4 text-primary" />}
+                                  {opt.imagePlaceholder && (
+                                    <div className="relative w-8 h-8 rounded-sm overflow-hidden border">
+                                      <Image 
+                                        src={opt.imagePlaceholder} 
+                                        alt={opt.label} 
+                                        fill
+                                        style={{ objectFit: 'cover' }}
+                                        sizes="(max-width: 768px) 50vw, 33vw"
+                                        data-ai-hint={opt.imageAiHint || opt.label}
+                                      />
+                                    </div>
+                                  )}
+                                  <span>{opt.label}</span>
+                                </li>
+                              );
+                            })}
                             {feature.options.length === 0 && <li className="text-sm text-muted-foreground italic">No options for this feature.</li>}
                           </ul>
                         </div>
@@ -257,15 +304,33 @@ export default function CategoryFormDialog({
                     {sizes.length === 0 ? (
                         <p className="text-sm text-muted-foreground text-center py-4">No sizes defined for this category yet.</p>
                     ) : (
-                        sizes.map((size) => (
+                        sizes.map((size) => {
+                          const SizeIcon = size.iconName ? (LucideIcons as any)[size.iconName] || null : null;
+                          return (
                             <div key={size.id} className="flex justify-between items-center p-3 border rounded-md bg-muted/30 shadow-sm">
-                                <span className="text-sm text-foreground">{size.label}</span>
+                                <div className="flex items-center space-x-2">
+                                  {SizeIcon && <SizeIcon className="h-5 w-5 text-primary" />}
+                                  {size.imagePlaceholder && (
+                                    <div className="relative w-10 h-10 rounded-sm overflow-hidden border">
+                                      <Image 
+                                        src={size.imagePlaceholder} 
+                                        alt={size.label} 
+                                        fill
+                                        style={{ objectFit: 'cover' }}
+                                        sizes="(max-width: 768px) 50vw, 33vw"
+                                        data-ai-hint={size.imageAiHint || size.label}
+                                      />
+                                    </div>
+                                  )}
+                                  <span className="text-sm text-foreground">{size.label}</span>
+                                </div>
                                 <div className="space-x-1">
                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleEditSize(size)} title="Edit size"><Edit className="h-4 w-4" /></Button>
                                 <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteSize(size.id)} title="Delete size" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
-                        ))
+                          );
+                        })
                     )}
                   </CardContent>
                 </Card>

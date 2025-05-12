@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Image from 'next/image';
+import * as LucideIcons from 'lucide-react';
 
 interface FeatureSelectorProps {
   features: FurnitureFeatureConfig[];
@@ -34,16 +36,34 @@ export default function FeatureSelector({ features, currentSelections, onFeature
               onValueChange={(value) => onFeatureSelect(feature.id, value)}
               className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2"
             >
-              {feature.options.map((option) => (
-                <Label
-                  key={option.id}
-                  htmlFor={`${feature.id}-${option.id}`}
-                  className="flex items-center space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
-                >
-                  <RadioGroupItem value={option.id} id={`${feature.id}-${option.id}`} />
-                  <span>{option.label}</span>
-                </Label>
-              ))}
+              {feature.options.map((option) => {
+                const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : LucideIcons.Minus;
+                return (
+                  <Label
+                    key={option.id}
+                    htmlFor={`${feature.id}-${option.id}`}
+                    className="flex flex-col p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary space-y-2"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <RadioGroupItem value={option.id} id={`${feature.id}-${option.id}`} />
+                      <IconComponent className="h-5 w-5 text-current" />
+                      <span>{option.label}</span>
+                    </div>
+                    {option.imagePlaceholder && (
+                      <div className="relative w-full h-24 mt-2 rounded-md overflow-hidden border">
+                        <Image
+                          src={option.imagePlaceholder}
+                          alt={option.label}
+                          fill
+                          style={{ objectFit: 'cover' }}
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          data-ai-hint={option.imageAiHint || option.label.toLowerCase()}
+                        />
+                      </div>
+                    )}
+                  </Label>
+                );
+              })}
             </RadioGroup>
           </div>
         ))}

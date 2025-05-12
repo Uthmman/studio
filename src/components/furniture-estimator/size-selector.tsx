@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Image from 'next/image';
+import * as LucideIcons from 'lucide-react';
 
 interface SizeSelectorProps {
   sizes: FurnitureSizeConfig[];
@@ -31,16 +33,34 @@ export default function SizeSelector({ sizes, currentSelection, onSizeSelect, on
             onValueChange={onSizeSelect}
             className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2"
           >
-            {sizes.map((size) => (
-              <Label
-                key={size.id}
-                htmlFor={`size-${size.id}`}
-                className="flex items-center space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
-              >
-                <RadioGroupItem value={size.id} id={`size-${size.id}`} />
-                <span>{size.label}</span>
-              </Label>
-            ))}
+            {sizes.map((size) => {
+              const IconComponent = size.iconName ? (LucideIcons as any)[size.iconName] || LucideIcons.Minus : LucideIcons.Minus;
+              return (
+                <Label
+                  key={size.id}
+                  htmlFor={`size-${size.id}`}
+                  className="flex flex-col p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary space-y-2"
+                >
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem value={size.id} id={`size-${size.id}`} />
+                    <IconComponent className="h-5 w-5 text-current" />
+                    <span>{size.label}</span>
+                  </div>
+                  {size.imagePlaceholder && (
+                    <div className="relative w-full h-24 mt-2 rounded-md overflow-hidden border">
+                      <Image
+                        src={size.imagePlaceholder}
+                        alt={size.label}
+                        fill
+                        style={{ objectFit: 'cover' }}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        data-ai-hint={size.imageAiHint || size.label.toLowerCase()}
+                      />
+                    </div>
+                  )}
+                </Label>
+              );
+            })}
           </RadioGroup>
         </div>
         <div className="flex justify-between pt-6">

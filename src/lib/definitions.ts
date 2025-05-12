@@ -8,6 +8,9 @@ export interface PriceRange {
 export interface FurnitureFeatureOption {
   id: string;
   label: string;
+  iconName?: string; // Optional: Lucide icon name
+  imagePlaceholder?: string; // Optional: URL for a placeholder image
+  imageAiHint?: string; // Optional: AI hint for the image
 }
 
 export interface FurnitureFeatureConfig {
@@ -19,6 +22,9 @@ export interface FurnitureFeatureConfig {
 export interface FurnitureSizeConfig {
   id: string;
   label: string;
+  iconName?: string; // Optional: Lucide icon name
+  imagePlaceholder?: string; // Optional: URL for a placeholder image
+  imageAiHint?: string; // Optional: AI hint for the image
 }
 
 export interface FurnitureCategory {

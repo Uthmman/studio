@@ -19,6 +19,8 @@ import { Trash2, Edit, PlusCircle } from "lucide-react";
 import React, { useState, useCallback } from "react";
 import FeatureOptionForm from "./feature-option-form";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
+import * as LucideIcons from "lucide-react";
 
 const featureSchema = z.object({
   name: z.string().min(1, "Feature name is required"),
@@ -90,14 +92,22 @@ export default function FeatureFormDialog({
     toast({ title: "Option Deleted", description: "The option has been removed from this feature." });
   };
 
-  const handleOptionFormSubmit = useCallback((data: { label: string }, optionIdToUpdate?: string) => {
+  const handleOptionFormSubmit = useCallback((
+    data: { label: string; iconName?: string; imagePlaceholder?: string; imageAiHint?: string }, 
+    optionIdToUpdate?: string
+  ) => {
     if (optionIdToUpdate) {
       setOptions(prev => prev.map(opt => opt.id === optionIdToUpdate ? { ...opt, ...data } : opt));
       toast({ title: "Option Updated", description: "The option has been successfully updated." });
     } else {
-      // For new options, assign a temporary client-side ID. Real ID will be from backend/data layer.
       const tempId = `temp-option-${Date.now()}`; 
-      setOptions(prev => [...prev, { id: tempId, ...data }]);
+      setOptions(prev => [...prev, { 
+        id: tempId, 
+        label: data.label,
+        iconName: data.iconName || "",
+        imagePlaceholder: data.imagePlaceholder || "https://picsum.photos/50/50",
+        imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0,2).join(" ")
+      }]);
       toast({ title: "Option Added", description: "The option has been added to this feature." });
     }
     setIsOptionFormOpen(false);
@@ -108,7 +118,7 @@ export default function FeatureFormDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Edit" : "Add"} Feature for {categoryName}
@@ -143,20 +153,38 @@ export default function FeatureFormDialog({
             {options.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-2">No options added yet. A feature must have at least one option.</p>
             ) : (
-              <ul className="space-y-2 max-h-48 overflow-y-auto border rounded-md p-3 bg-muted/50">
-                {options.map((option) => (
-                  <li key={option.id} className="flex items-center justify-between p-2 bg-background rounded-md shadow-sm">
-                    <span className="text-sm">{option.label}</span>
-                    <div className="space-x-2">
-                      <Button type="button" variant="ghost" size="icon" onClick={() => handleEditOption(option)} title="Edit option">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteOption(option.id)} title="Delete option" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
+              <ul className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-3 bg-muted/50">
+                {options.map((option) => {
+                  const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : null;
+                  return (
+                    <li key={option.id} className="flex items-center justify-between p-2 bg-background rounded-md shadow-sm">
+                      <div className="flex items-center space-x-2">
+                        {IconComponent && <IconComponent className="h-4 w-4 text-muted-foreground" />}
+                        {option.imagePlaceholder && (
+                          <div className="relative w-10 h-10 rounded overflow-hidden border">
+                            <Image 
+                              src={option.imagePlaceholder} 
+                              alt={option.label} 
+                              fill
+                              style={{ objectFit: 'cover' }}
+                              sizes="(max-width: 768px) 50vw, 33vw"
+                              data-ai-hint={option.imageAiHint || option.label}
+                            />
+                          </div>
+                        )}
+                        <span className="text-sm">{option.label}</span>
+                      </div>
+                      <div className="space-x-1">
+                        <Button type="button" variant="ghost" size="icon" onClick={() => handleEditOption(option)} title="Edit option">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteOption(option.id)} title="Delete option" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
