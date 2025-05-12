@@ -17,6 +17,7 @@ export interface FurnitureFeatureConfig {
   id: string; 
   name: string; 
   options: FurnitureFeatureOption[];
+  selectionType?: 'single' | 'multiple'; // New: Defaults to 'single'
 }
 
 export interface FurnitureSizeConfig {
@@ -39,14 +40,14 @@ export interface FurnitureCategory {
 
 export interface PriceDataEntry {
   categoryId: string;
-  featureSelections: Record<string, string>; // { featureId: optionId }
+  featureSelections: Record<string, string | string[]>; // { featureId: optionId or optionId[] }
   sizeId: string;
   priceRange: PriceRange;
 }
 
 export type UserSelections = {
   categoryId: string | null;
-  featureSelections: Record<string, string>;
+  featureSelections: Record<string, string | string[]>; // Updated for multi-select
   sizeId: string | null;
 };
 
@@ -62,10 +63,11 @@ export interface EstimationRecord {
 }
 
 // For displaying price entries in the admin panel, including combinations that might not have a price yet.
-export interface DisplayablePriceEntry extends PriceDataEntry {
+export interface DisplayablePriceEntry extends Omit<PriceDataEntry, 'featureSelections'> {
+  featureSelections: Record<string, string | string[]>; // Updated for multi-select
   description: string; // Full human-readable description of the combination
   isPriced: boolean; // True if a price entry exists for this combination
   categoryName: string; // Name of the category
-  featureDescription: string; // Description of selected features, e.g., "Material: Wood, Color: Red"
+  featureDescription: string; // Description of selected features, e.g., "Material: Wood, Color: Red & Blue"
   sizeLabel: string; // Label of the selected size
 }

@@ -1,7 +1,8 @@
+
 "use client";
 
 import { useState, useMemo, useCallback } from 'react';
-import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, EstimationRecord } from '@/lib/definitions';
+import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, FurnitureFeatureConfig } from '@/lib/definitions';
 import { FURNITURE_CATEGORIES, getEstimatedPrice, generateItemDescription } from '@/lib/furniture-data';
 import CategorySelector from '@/components/furniture-estimator/category-selector';
 import FeatureSelector from '@/components/furniture-estimator/feature-selector';
@@ -34,7 +35,7 @@ export default function FurnitureEstimatorPage() {
   }, [selections.categoryId]);
 
   const handleCategorySelect = useCallback((categoryId: string) => {
-    setSelections({
+    setSelections({ // Reset selections when category changes
       categoryId,
       featureSelections: {}, 
       sizeId: null,          
@@ -49,36 +50,81 @@ export default function FurnitureEstimatorPage() {
     }
   }, []);
 
-  const handleFeatureSelect = useCallback((featureId: string, optionId: string) => {
-    setSelections(prev => ({
-      ...prev,
-      featureSelections: {
-        ...prev.featureSelections,
-        [featureId]: optionId,
-      },
-    }));
-  }, []);
+  const handleFeatureSelect = useCallback((featureId: string, optionId: string, isSelected?: boolean) => {
+    const featureConfig = currentCategoryData?.features.find(f => f.id === featureId);
+    if (!featureConfig) return;
+
+    setSelections(prev => {
+      const newFeatureSelections = { ...prev.featureSelections };
+      if (featureConfig.selectionType === 'multiple') {
+        const currentSelectionForFeature = prev.featureSelections[featureId];
+        let newSelectionArray: string[];
+
+        if (Array.isArray(currentSelectionForFeature)) {
+          newSelectionArray = [...currentSelectionForFeature];
+        } else if (typeof currentSelectionForFeature === 'string' && currentSelectionForFeature) {
+          // This case should ideally not happen if UI is correct, but handle defensively
+          newSelectionArray = [currentSelectionForFeature]; 
+        }
+        else {
+          newSelectionArray = [];
+        }
+
+        if (isSelected) { // Checkbox checked
+          if (!newSelectionArray.includes(optionId)) {
+            newSelectionArray.push(optionId);
+          }
+        } else { // Checkbox unchecked
+          newSelectionArray = newSelectionArray.filter(id => id !== optionId);
+        }
+        newFeatureSelections[featureId] = newSelectionArray.length > 0 ? newSelectionArray : []; // Store empty array if all unselected
+      } else { // Single select (Radio)
+        newFeatureSelections[featureId] = optionId;
+      }
+      return { ...prev, featureSelections: newFeatureSelections };
+    });
+  }, [currentCategoryData]);
 
   const handleProceedToSize = useCallback(() => {
     setStep('size');
   }, []);
   
   const handleBackToCategory = useCallback(() => {
-    setSelections(prev => ({...initialSelections, categoryId: null})); 
+    setSelections(initialSelections); 
     setStep('category');
   }, []);
 
   const handleBackToFeatures = useCallback(() => {
      setSelections(prev => ({...prev, sizeId: null})); 
-     setStep('features');
-  }, []);
+     if (currentCategoryData?.features.length === 0) { // If no features, go back to category
+        handleBackToCategory();
+     } else {
+        setStep('features');
+     }
+  }, [currentCategoryData, handleBackToCategory]);
 
   const handleSizeSelect = useCallback((sizeId: string) => {
     setSelections(prev => ({ ...prev, sizeId }));
   }, []);
 
   const handleGetEstimate = useCallback(() => {
-    if (!selections.categoryId || !selections.sizeId) return;
+    if (!selections.categoryId || !selections.sizeId || !currentCategoryData) return;
+
+    // Ensure all features that require selection have one.
+    // This check might be redundant if "Next" button in FeatureSelector already validates.
+    const allRequiredFeaturesSelected = currentCategoryData.features.every(f => {
+        const selection = selections.featureSelections[f.id];
+        if (f.selectionType === 'multiple') {
+            return f.options.length === 0 || (Array.isArray(selection) && selection.length > 0);
+        }
+        return !!selection;
+    });
+
+    if (!allRequiredFeaturesSelected && currentCategoryData.features.length > 0) {
+        // Optionally show a toast or message here if needed, though UI should prevent this.
+        console.warn("Not all required features are selected.");
+        return;
+    }
 
     const priceEntry = getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId);
     const description = generateItemDescription(selections, FURNITURE_CATEGORIES);
@@ -86,12 +132,12 @@ export default function FurnitureEstimatorPage() {
     const estimationResult = {
         priceRange: priceEntry?.priceRange || null, 
         description,
-        selections: { ...selections } // Capture the current selections
+        selections: { ...selections } 
     };
     setCurrentEstimationData(estimationResult);
-    addHistoryItem(estimationResult); // Add to history
+    addHistoryItem(estimationResult); 
     setStep('result');
-  }, [selections, addHistoryItem]);
+  }, [selections, addHistoryItem, currentCategoryData]);
 
   const handleStartOver = useCallback(() => {
     setSelections(initialSelections);
@@ -119,6 +165,7 @@ export default function FurnitureEstimatorPage() {
         return <CategorySelector categories={FURNITURE_CATEGORIES} onSelectCategory={handleCategorySelect} />;
       case 'features':
         if (!currentCategoryData) return <p>Error: Category not found.</p>;
+        // Pass allCategories if FeatureSelector needs it, otherwise it can be removed from props there.
         return (
           <FeatureSelector
             features={currentCategoryData.features}
@@ -127,10 +174,9 @@ export default function FurnitureEstimatorPage() {
             onNext={handleProceedToSize}
             onBack={handleBackToCategory}
             categoryName={currentCategoryData.name}
-            selectedOptionsImageURLs={currentEstimationData?.selections.featureSelections || {}}
             categoryImageURL={currentCategoryData.imagePlaceholder}
             categoryImageAiHint={currentCategoryData.imageAiHint}
-            allCategories={FURNITURE_CATEGORIES}
+            allCategories={FURNITURE_CATEGORIES} 
           />
         );
       case 'size':
@@ -141,12 +187,10 @@ export default function FurnitureEstimatorPage() {
             currentSelection={selections.sizeId}
             onSizeSelect={handleSizeSelect}
             onGetEstimate={handleGetEstimate}
-            onBack={currentCategoryData.features.length > 0 ? handleBackToFeatures : handleBackToCategory}
+            onBack={handleBackToFeatures} // Always go back to features or category via handleBackToFeatures
             categoryName={currentCategoryData.name}
             categoryImageURL={currentCategoryData.imagePlaceholder}
             categoryImageAiHint={currentCategoryData.imageAiHint}
-            currentSelections={selections}
-            allCategories={FURNITURE_CATEGORIES}
           />
         );
       case 'result':
@@ -189,3 +233,4 @@ export default function FurnitureEstimatorPage() {
     </div>
   );
 }
+

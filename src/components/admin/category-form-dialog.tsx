@@ -18,7 +18,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, CheckSquare, ListChecks } from "lucide-react"; // Added ListChecks for multiple
 import React, { useState, useCallback } from "react";
 import FeatureFormDialog from "./feature-form-dialog";
 import SizeFormDialog from "./size-form-dialog";
@@ -129,7 +129,7 @@ export default function CategoryFormDialog({
     toast({ title: "Feature Deleted", description: "The feature and its options have been removed from this category."});
   };
   const handleFeatureFormSubmit = useCallback((
-    data: { name: string }, 
+    data: { name: string; selectionType: 'single' | 'multiple' }, 
     featureOptions: FurnitureFeatureOption[], 
     featureIdToUpdate?: string
   ) => {
@@ -142,12 +142,13 @@ export default function CategoryFormDialog({
     }));
 
     if (featureIdToUpdate) {
-      setFeatures(prev => prev.map(f => f.id === featureIdToUpdate ? { ...f, name: data.name, options: completeOptions } : f));
+      setFeatures(prev => prev.map(f => f.id === featureIdToUpdate ? { ...f, name: data.name, selectionType: data.selectionType, options: completeOptions } : f));
       toast({ title: "Feature Updated", description: "The feature has been successfully updated."});
     } else {
       const newFeature: FurnitureFeatureConfig = { 
           id: generateId('feat'), 
           name: data.name, 
+          selectionType: data.selectionType,
           options: completeOptions
       };
       setFeatures(prev => [...prev, newFeature]);
@@ -255,7 +256,11 @@ export default function CategoryFormDialog({
                       features.map((feature) => (
                         <div key={feature.id} className="p-3 border rounded-md bg-muted/30 shadow-sm">
                           <div className="flex justify-between items-center mb-2">
-                            <h4 className="font-semibold text-foreground">{feature.name}</h4>
+                            <div className="flex items-center gap-2">
+                              {feature.selectionType === 'multiple' ? <ListChecks className="h-5 w-5 text-primary" /> : <CheckSquare className="h-5 w-5 text-primary" />}
+                              <h4 className="font-semibold text-foreground">{feature.name}</h4>
+                              <span className="text-xs text-muted-foreground">({feature.selectionType || 'single'} select)</span>
+                            </div>
                             <div className="space-x-1">
                               <Button type="button" variant="ghost" size="icon" onClick={() => handleEditFeature(feature)} title="Edit feature"><Edit className="h-4 w-4" /></Button>
                               <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteFeature(feature.id)} title="Delete feature" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>

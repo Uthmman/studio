@@ -1,6 +1,16 @@
 import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig, UserSelections, DisplayablePriceEntry } from '@/lib/definitions';
 import { generateId } from '@/lib/utils';
 
+// Helper to convert array of option IDs to a canonical string form (sorted, comma-separated)
+// and to handle single string values consistently.
+export const getCanonicalFeatureValue = (value: string | string[] | undefined): string => {
+  if (Array.isArray(value)) {
+    return value.sort().join(',');
+  }
+  return value || ''; // Return empty string if undefined or already a string (could be empty)
+};
+
+
 // Make data mutable for in-session admin editing
 export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
   {
@@ -13,6 +23,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'sofas-feat-seats',
         name: 'Number of Seats',
+        selectionType: 'single',
         options: [
           { id: 'sofas-feat-seats-opt-2', label: '2-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/sofa2seater/400/300', imageAiHint: 'small sofa' },
           { id: 'sofas-feat-seats-opt-3', label: '3-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/sofa3seater/400/300', imageAiHint: 'medium sofa' },
@@ -22,6 +33,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'sofas-feat-material',
         name: 'Upholstery Material',
+        selectionType: 'single',
         options: [
           { id: 'sofas-feat-material-opt-fabric', label: 'Fabric', iconName: 'GalleryThumbnails', imagePlaceholder: 'https://picsum.photos/seed/fabrictex/100/100', imageAiHint: 'fabric texture' },
           { id: 'sofas-feat-material-opt-leather', label: 'Leather', iconName: 'Option', imagePlaceholder: 'https://picsum.photos/seed/leathertex/100/100', imageAiHint: 'leather texture' },
@@ -31,6 +43,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'sofas-feat-style',
         name: 'Style',
+        selectionType: 'multiple', // Changed to multiple for testing
         options: [
           { id: 'sofas-feat-style-opt-modern', label: 'Modern', iconName: 'Zap', imagePlaceholder: 'https://picsum.photos/seed/modernsofa/400/300', imageAiHint: 'modern sofa' },
           { id: 'sofas-feat-style-opt-traditional', label: 'Traditional', iconName: 'Grape', imagePlaceholder: 'https://picsum.photos/seed/tradsofa/400/300', imageAiHint: 'classic sofa' },
@@ -54,6 +67,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'tables-feat-shape',
         name: 'Shape',
+        selectionType: 'single',
         options: [
           { id: 'tables-feat-shape-opt-rect', label: 'Rectangular', iconName: 'RectangleHorizontal', imagePlaceholder: 'https://picsum.photos/seed/recttable/400/300', imageAiHint: 'rectangle table' },
           { id: 'tables-feat-shape-opt-round', label: 'Round', iconName: 'Circle', imagePlaceholder: 'https://picsum.photos/seed/roundtable/400/300', imageAiHint: 'round table' },
@@ -63,6 +77,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'tables-feat-material',
         name: 'Table Material',
+        selectionType: 'single',
         options: [
           { id: 'tables-feat-material-opt-wood', label: 'Wood', iconName: 'TreeDeciduous', imagePlaceholder: 'https://picsum.photos/seed/woodgrain/100/100', imageAiHint: 'wood grain' },
           { id: 'tables-feat-material-opt-glass', label: 'Glass', iconName: 'SquareDashedBottom', imagePlaceholder: 'https://picsum.photos/seed/glasssurface/100/100', imageAiHint: 'glass surface' }, 
@@ -86,6 +101,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'beds-feat-frame',
         name: 'Frame Material',
+        selectionType: 'single',
         options: [
           { id: 'beds-feat-frame-opt-wood', label: 'Wood', iconName: 'Construction', imagePlaceholder: 'https://picsum.photos/seed/woodframe/100/100', imageAiHint: 'wood frame' },
           { id: 'beds-feat-frame-opt-metal', label: 'Metal', iconName: 'Shield', imagePlaceholder: 'https://picsum.photos/seed/metalframe/100/100', imageAiHint: 'metal frame' }, 
@@ -95,6 +111,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       {
         id: 'beds-feat-headboard',
         name: 'Headboard',
+        selectionType: 'single',
         options: [
           { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard', iconName: 'SquareArrowUp', imagePlaceholder: 'https://picsum.photos/seed/bedheadboard/400/300', imageAiHint: 'bed headboard' },
           { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard', iconName: 'SquareDashedBottom', imagePlaceholder: 'https://picsum.photos/seed/simplebed/400/300', imageAiHint: 'simple bed' },
@@ -111,13 +128,16 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
 ];
 
 export let PRICE_DATA: PriceDataEntry[] = [
-  // Sofas
+  // Sofas - Note: 'sofas-feat-style' is multi-select
+  // Single style selections
   { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-small', priceRange: { min: 300, max: 700 } },
   { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 700, max: 1600 } },
   { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-sectional', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-traditional' }, sizeId: 'sofas-size-large', priceRange: { min: 1500, max: 3500 } },
   { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-velvet', 'sofas-feat-style': 'sofas-feat-style-opt-midcentury' }, sizeId: 'sofas-size-small', priceRange: { min: 500, max: 1000 } },
   { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 1200, max: 2500 } },
-
+  // Multi-style selection example (Modern + Mid-Century)
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': getCanonicalFeatureValue(['sofas-feat-style-opt-midcentury', 'sofas-feat-style-opt-modern']) }, sizeId: 'sofas-size-small', priceRange: { min: 600, max: 1100 } },
+  
   // Dining Tables
   { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-rect', 'tables-feat-material': 'tables-feat-material-opt-wood' }, sizeId: 'tables-size-4-6', priceRange: { min: 350, max: 850 } },
   { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-round', 'tables-feat-material': 'tables-feat-material-opt-glass' }, sizeId: 'tables-size-2-4', priceRange: { min: 200, max: 600 } },
@@ -165,6 +185,7 @@ export const addFeatureToCategory = (categoryId: string, featureData: Omit<Furni
     const newFeature: FurnitureFeatureConfig = {
       ...featureData,
       id: generateId(`${categoryId}-feat`),
+      selectionType: featureData.selectionType || 'single',
       options: [],
     };
     category.features.push(newFeature);
@@ -178,8 +199,11 @@ export const updateFeatureInCategory = (categoryId: string, updatedFeature: Furn
   if (category) {
     const featureIndex = category.features.findIndex(f => f.id === updatedFeature.id);
     if (featureIndex !== -1) {
-      category.features[featureIndex] = updatedFeature;
-      return updatedFeature;
+      category.features[featureIndex] = {
+        ...updatedFeature,
+        selectionType: updatedFeature.selectionType || 'single',
+      };
+      return category.features[featureIndex];
     }
   }
   return null;
@@ -190,18 +214,13 @@ export const deleteFeatureFromCategory = (categoryId: string, featureId: string)
   if (category) {
     const initialLength = category.features.length;
     category.features = category.features.filter(f => f.id !== featureId);
-    // Also remove related feature selections from price data
-    PRICE_DATA.forEach(p => {
-      if (p.categoryId === categoryId && p.featureSelections[featureId]) {
-        delete p.featureSelections[featureId];
-      }
+    PRICE_DATA = PRICE_DATA.filter(p => {
+      if (p.categoryId !== categoryId) return true; // Keep if not this category
+      // Check if the deleted feature was part of this price entry's selections
+      const featureValue = p.featureSelections[featureId];
+      if (featureValue === undefined) return true; // Keep if this feature wasn't selected
+      return false; // Remove if this feature was selected
     });
-    // More robust: filter out price entries that depended on this specific feature existing.
-    // This is complex as a feature deletion changes the "shape" of valid combinations.
-    // For now, just deleting the specific selection is a basic step. A full cleanup might be needed.
-    PRICE_DATA = PRICE_DATA.filter(p => !(p.categoryId === categoryId && p.featureSelections[featureId]));
-
-
     return category.features.length < initialLength;
   }
   return false;
@@ -255,7 +274,16 @@ export const deleteOptionFromFeature = (categoryId: string, featureId: string, o
       const initialLength = feature.options.length;
       feature.options = feature.options.filter(o => o.id !== optionId);
       // Remove price data entries that used this specific option
-      PRICE_DATA = PRICE_DATA.filter(p => !(p.categoryId === categoryId && p.featureSelections[featureId] === optionId));
+      PRICE_DATA = PRICE_DATA.filter(p => {
+        if (p.categoryId !== categoryId) return true;
+        const selectionForFeature = p.featureSelections[featureId];
+        if (typeof selectionForFeature === 'string') {
+          return selectionForFeature !== optionId;
+        } else if (Array.isArray(selectionForFeature)) {
+          return !selectionForFeature.includes(optionId);
+        }
+        return true;
+      });
       return feature.options.length < initialLength;
     }
   }
@@ -311,7 +339,7 @@ export const deleteSizeFromCategory = (categoryId: string, sizeId: string): bool
 
 export function getEstimatedPrice(
   categoryId: string | null,
-  featureSelections: Record<string, string>,
+  featureSelectionsFromUser: Record<string, string | string[]>,
   sizeId: string | null
 ): PriceDataEntry | null {
   if (!categoryId || !sizeId) return null;
@@ -323,32 +351,40 @@ export function getEstimatedPrice(
     if (item.categoryId !== categoryId || item.sizeId !== sizeId) {
       return false;
     }
-    
-    const priceEntryFeatureKeys = Object.keys(item.featureSelections);
-    const selectionFeatureKeys = Object.keys(featureSelections);
 
     // For categories with no features, direct match on categoryId and sizeId is enough if item.featureSelections is empty.
     if (category.features.length === 0) {
-      return priceEntryFeatureKeys.length === 0;
+      return Object.keys(item.featureSelections).length === 0;
     }
 
-    // For categories with features, the number of selected features in the price entry
-    // must match the number of features relevant to the user's selection for that category.
-    // And all feature selections must match.
-    if (priceEntryFeatureKeys.length !== selectionFeatureKeys.length) { // Could also use category.features.length if all must be defined
-        // This check ensures that the price entry is for the exact set of features selected.
-        // A more complex system might allow partial matches or default prices if a feature isn't specified in PRICE_DATA.
-        // For now, we expect PRICE_DATA to be specific.
-        // A price entry should only contain keys for features defined in its category.
-        // And the user's selection should also align with defined features.
-        // This comparison is essentially checking if featureSelections objects are identical in terms of keys and values.
-        return false;
+    // Compare feature selections
+    // Number of features being compared should match the category's defined features
+    if (Object.keys(item.featureSelections).length !== category.features.length) {
+        // This check might be too strict if price data can omit features (using defaults).
+        // For now, assume price data is explicit for all category features.
+        // console.warn("Price data feature count mismatch for category:", category.name, item.featureSelections, category.features);
+        // return false; 
     }
 
-    return priceEntryFeatureKeys.every(key => item.featureSelections[key] === featureSelections[key]);
+
+    return category.features.every(featureConfig => {
+      const userSelectionForFeature = featureSelectionsFromUser[featureConfig.id];
+      const priceDataSelectionForFeature = item.featureSelections[featureConfig.id];
+      
+      // If a feature is defined for the category but not present in price data or user selection (should not happen with proper UI)
+      if (userSelectionForFeature === undefined && priceDataSelectionForFeature === undefined) return true; // Both undefined, considered a match for this feature
+      if (userSelectionForFeature === undefined || priceDataSelectionForFeature === undefined) return false; // One is undefined, mismatch
+
+
+      const canonicalUserValue = getCanonicalFeatureValue(userSelectionForFeature);
+      const canonicalPriceDataValue = getCanonicalFeatureValue(priceDataSelectionForFeature);
+      
+      return canonicalUserValue === canonicalPriceDataValue;
+    });
   });
   return entry || null;
 }
+
 
 export function generateItemDescription(
   selections: UserSelections,
@@ -363,11 +399,21 @@ export function generateItemDescription(
   const featureParts: string[] = [];
 
   for (const featureConfig of category.features) {
-    const selectedOptionId = selections.featureSelections[featureConfig.id];
-    if (selectedOptionId) {
-      const option = featureConfig.options.find(o => o.id === selectedOptionId);
-      if (option) {
-        featureParts.push(option.label);
+    const selectedValue = selections.featureSelections[featureConfig.id];
+    if (selectedValue) {
+      if (Array.isArray(selectedValue)) { // Multi-select
+        const optionLabels = selectedValue.map(optId => {
+          const option = featureConfig.options.find(o => o.id === optId);
+          return option ? option.label : '';
+        }).filter(label => label);
+        if (optionLabels.length > 0) {
+          featureParts.push(`${featureConfig.name}: ${optionLabels.join(' & ')}`);
+        }
+      } else { // Single-select
+        const option = featureConfig.options.find(o => o.id === selectedValue);
+        if (option) {
+          featureParts.push(`${featureConfig.name}: ${option.label}`);
+        }
       }
     }
   }
@@ -397,8 +443,6 @@ export function getFinalImageForSelections(
   let finalImageUrl = category.imagePlaceholder;
   let finalImageAiHint = category.imageAiHint;
   
-  // Start with category image
-  // Override with size image if available and more specific
   if (selections.sizeId) {
     const sizeConfig = category.sizes.find(s => s.id === selections.sizeId);
     if (sizeConfig?.imagePlaceholder) {
@@ -407,21 +451,33 @@ export function getFinalImageForSelections(
     }
   }
   
-  // Override with feature option image if available and even more specific
-  // This takes the image of the *first* selected feature option that has one.
   for (const feature of category.features) {
-    const selectedOptionId = selections.featureSelections[feature.id];
-    if (selectedOptionId) {
-      const option = feature.options.find(opt => opt.id === selectedOptionId);
-      if (option?.imagePlaceholder) {
-        finalImageUrl = option.imagePlaceholder;
-        finalImageAiHint = option.imageAiHint || option.label;
-        break; // Use the first feature option image found
+    const selectedValue = selections.featureSelections[feature.id];
+    if (selectedValue) {
+      const firstSelectedOptionId = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
+      if (firstSelectedOptionId) {
+        const option = feature.options.find(opt => opt.id === firstSelectedOptionId);
+        if (option?.imagePlaceholder) {
+          finalImageUrl = option.imagePlaceholder;
+          finalImageAiHint = option.imageAiHint || option.label;
+          break; 
+        }
       }
     }
   }
-
   return { finalImageUrl, finalImageAiHint };
+}
+
+// Helper to generate power set for multi-select options
+function getPowerSet<T>(array: T[]): T[][] {
+    const result: T[][] = [[]];
+    for (const value of array) {
+        const length = result.length;
+        for (let i = 0; i < length; i++) {
+            result.push(result[i].concat(value));
+        }
+    }
+    return result.filter(subset => subset.length > 0); // Exclude empty set
 }
 
 
@@ -429,55 +485,73 @@ export function getAllPossibleCombinationsWithPrices(): DisplayablePriceEntry[] 
   const allCombinations: DisplayablePriceEntry[] = [];
 
   FURNITURE_CATEGORIES.forEach(category => {
-    // Helper to generate all permutations of feature selections
     const generateFeaturePermutations = (
       featureIndex: number,
-      currentSelections: Record<string, string>
-    ): Record<string, string>[] => {
+      currentSelections: Record<string, string | string[]>
+    ): Record<string, string | string[]>[] => {
       if (featureIndex >= category.features.length) {
-        // Base case: all features processed, return this specific combination
         return [currentSelections];
       }
 
       const feature = category.features[featureIndex];
-      let permutations: Record<string, string>[] = [];
+      let permutations: Record<string, string | string[]>[] = [];
 
-      if (feature.options.length === 0) { 
-        // If a feature has no options, it can't form a valid part of a combination.
-        // This path should technically not be hit if forms ensure options exist.
-        // Treat as if this feature path doesn't yield further combinations.
-        // Or, if a feature can be "skipped", logic would be different. Assuming features *must* be selected if they exist.
-        return generateFeaturePermutations(featureIndex + 1, currentSelections); // Effectively skips this feature if no options
+      if (feature.options.length === 0) {
+        return generateFeaturePermutations(featureIndex + 1, currentSelections);
       }
 
-      for (const option of feature.options) {
-        const nextSelections = {
-          ...currentSelections,
-          [feature.id]: option.id,
-        };
-        permutations = permutations.concat(
-          generateFeaturePermutations(featureIndex + 1, nextSelections)
-        );
+      if (feature.selectionType === 'multiple') {
+        const optionSubsets = getPowerSet(feature.options.map(opt => opt.id));
+        if (optionSubsets.length === 0) { // Should not happen if getPowerSet excludes empty and feature has options
+             permutations = permutations.concat(
+                generateFeaturePermutations(featureIndex + 1, currentSelections)
+            );
+        } else {
+            optionSubsets.forEach(subset => {
+              if (subset.length > 0) { // Ensure we only process non-empty subsets
+                const nextSelections = {
+                  ...currentSelections,
+                  [feature.id]: subset.sort().join(','), // Store as canonical string
+                };
+                permutations = permutations.concat(
+                  generateFeaturePermutations(featureIndex + 1, nextSelections)
+                );
+              }
+            });
+        }
+         // Case where "no option selected" for a multi-select might be valid (if feature itself is optional)
+         // For now, assuming at least one must be selected if options exist for multi-select to form a combination.
+         // If a multi-select can be "empty", add:
+         // permutations = permutations.concat(generateFeaturePermutations(featureIndex + 1, currentSelections));
+
+      } else { // single-select
+        for (const option of feature.options) {
+          const nextSelections = {
+            ...currentSelections,
+            [feature.id]: option.id,
+          };
+          permutations = permutations.concat(
+            generateFeaturePermutations(featureIndex + 1, nextSelections)
+          );
+        }
       }
       return permutations;
     };
 
-    const featurePermutations: Record<string, string>[] = category.features.length > 0
+    const featurePermutations: Record<string, string | string[]>[] = category.features.length > 0
       ? generateFeaturePermutations(0, {})
-      : [{}]; // If no features, there's one "combination" of features: an empty one.
+      : [{}]; 
 
-    if (category.sizes.length === 0) return; // A category must have sizes to be priceable
+    if (category.sizes.length === 0) return; 
 
     category.sizes.forEach(size => {
       featurePermutations.forEach(currentFeatureSelections => {
-        // Make sure currentFeatureSelections only contains keys relevant to this category's features
-        const relevantFeatureSelections: Record<string, string> = {};
+        const relevantFeatureSelections: Record<string, string | string[]> = {};
         category.features.forEach(f => {
-            if(currentFeatureSelections[f.id]) {
+            if(currentFeatureSelections[f.id] !== undefined) { // Check for undefined
                 relevantFeatureSelections[f.id] = currentFeatureSelections[f.id];
             }
         });
-
 
         const userSelections: UserSelections = {
           categoryId: category.id,
@@ -490,10 +564,21 @@ export function getAllPossibleCombinationsWithPrices(): DisplayablePriceEntry[] 
 
         const featureParts: string[] = [];
         category.features.forEach(fConf => {
-          const optId = relevantFeatureSelections[fConf.id];
-          if (optId) {
-            const opt = fConf.options.find(o => o.id === optId);
-            if (opt) featureParts.push(`${fConf.name}: ${opt.label}`);
+          const selectedValue = relevantFeatureSelections[fConf.id];
+          if (selectedValue) {
+            if (Array.isArray(selectedValue)) { // Should be canonical string from permutation
+                const optionLabels = selectedValue.map(id => fConf.options.find(o => o.id === id)?.label).filter(Boolean);
+                if(optionLabels.length > 0) featureParts.push(`${fConf.name}: ${optionLabels.join(' & ')}`);
+
+            } else if (typeof selectedValue === 'string' && fConf.selectionType === 'multiple') {
+                 const ids = selectedValue.split(',');
+                 const optionLabels = ids.map(id => fConf.options.find(o => o.id === id)?.label).filter(Boolean);
+                 if(optionLabels.length > 0) featureParts.push(`${fConf.name}: ${optionLabels.join(' & ')}`);
+            }
+             else { // single select or already processed multi-select string
+              const opt = fConf.options.find(o => o.id === selectedValue);
+              if (opt) featureParts.push(`${fConf.name}: ${opt.label}`);
+            }
           }
         });
         const featureDescription = featureParts.join(', ') || 'N/A';
@@ -520,34 +605,47 @@ export const updateOrAddPriceData = (entry: PriceDataEntry): PriceDataEntry | nu
   const category = FURNITURE_CATEGORIES.find(c => c.id === entry.categoryId);
   if (!category) return null;
 
-  const index = PRICE_DATA.findIndex(p =>
-    p.categoryId === entry.categoryId &&
-    p.sizeId === entry.sizeId &&
-    Object.keys(entry.featureSelections).length === Object.keys(p.featureSelections).length &&
-    Object.keys(entry.featureSelections).every(featId => entry.featureSelections[featId] === p.featureSelections[featId])
-  );
-
   if (entry.priceRange.min < 0 || entry.priceRange.max < 0 || entry.priceRange.min > entry.priceRange.max) {
     console.error("Invalid price range for update/add:", entry.priceRange);
-    return null; // Or throw error
+    return null;
   }
+  
+  // Ensure featureSelections are in canonical form for comparison and storage
+  const canonicalEntrySelections: Record<string, string> = {};
+  category.features.forEach(featConf => {
+      const val = entry.featureSelections[featConf.id];
+      if (val !== undefined) { // only process if defined
+          canonicalEntrySelections[featConf.id] = getCanonicalFeatureValue(val);
+      }
+  });
+
+  const index = PRICE_DATA.findIndex(p => {
+    if (p.categoryId !== entry.categoryId || p.sizeId !== entry.sizeId) return false;
+    
+    // Compare canonical forms of feature selections
+    const pCanonicalSelections: Record<string, string> = {};
+    category.features.forEach(featConf => {
+        const val = p.featureSelections[featConf.id];
+         if (val !== undefined) {
+            pCanonicalSelections[featConf.id] = getCanonicalFeatureValue(val);
+        }
+    });
+
+    if (Object.keys(canonicalEntrySelections).length !== Object.keys(pCanonicalSelections).length) return false;
+    return Object.keys(canonicalEntrySelections).every(featId => canonicalEntrySelections[featId] === pCanonicalSelections[featId]);
+  });
+
 
   if (index !== -1) {
-    // Update existing entry
     PRICE_DATA[index].priceRange = entry.priceRange;
+    // Ensure stored selections are also canonical
+    PRICE_DATA[index].featureSelections = canonicalEntrySelections; 
     return PRICE_DATA[index];
   } else {
-    // Add new entry
-    // Ensure featureSelections only contain valid features for the category
-    const validFeatureSelections: Record<string, string> = {};
-    if (category.features && category.features.length > 0) {
-        category.features.forEach(feat => {
-            if (entry.featureSelections[feat.id]) {
-                validFeatureSelections[feat.id] = entry.featureSelections[feat.id];
-            }
-        });
-    }
-    const newPriceEntry: PriceDataEntry = { ...entry, featureSelections: validFeatureSelections };
+    const newPriceEntry: PriceDataEntry = { 
+        ...entry, 
+        featureSelections: canonicalEntrySelections // Store with canonical feature values
+    };
     PRICE_DATA.push(newPriceEntry);
     return newPriceEntry;
   }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { getCanonicalFeatureValue } from '@/lib/furniture-data'; // Import helper
 
 interface PriceDataTableProps {
   priceEntries: DisplayablePriceEntryType[];
@@ -17,8 +19,8 @@ interface PriceDataTableProps {
 // Helper to create a unique key for state management and React list keys
 const createEntryKey = (entry: DisplayablePriceEntryType): string => {
   const featuresKey = Object.entries(entry.featureSelections)
-    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Ensure consistent order for key generation
-    .map(([key, value]) => `${key}:${value}`)
+    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) 
+    .map(([key, value]) => `${key}:${getCanonicalFeatureValue(value)}`) // Use canonical value for key
     .join(';');
   return `${entry.categoryId}|${featuresKey}|${entry.sizeId}`;
 };
@@ -40,11 +42,10 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
   }, [priceEntries]);
 
   const handleInputChange = (key: string, field: 'min' | 'max', value: string) => {
-    // Allow empty string for easier editing, validation happens on save
     setEditablePrices(prev => ({
       ...prev,
       [key]: {
-        ...(prev[key] || { min: '0', max: '0'}), // Ensure prev[key] exists
+        ...(prev[key] || { min: '0', max: '0'}), 
         [field]: value,
       },
     }));
@@ -54,7 +55,7 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
     const key = createEntryKey(entry);
     const { min: minStr, max: maxStr } = editablePrices[key] || { min: '0', max: '0' };
     
-    const minPrice = parseFloat(minStr); // Use parseFloat to allow decimals if desired, or parseInt
+    const minPrice = parseFloat(minStr); 
     const maxPrice = parseFloat(maxStr);
 
     if (isNaN(minPrice) || isNaN(maxPrice) || minPrice < 0 || maxPrice < 0) {
@@ -66,9 +67,11 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
       return;
     }
     
+    // Pass featureSelections as is from the DisplayablePriceEntry, 
+    // as it should already be in the correct (possibly canonical string for multi) format from getAllPossibleCombinations
     onSavePrice({
       categoryId: entry.categoryId,
-      featureSelections: entry.featureSelections,
+      featureSelections: entry.featureSelections, 
       sizeId: entry.sizeId,
       priceRange: { min: minPrice, max: maxPrice },
     });
@@ -112,7 +115,7 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
                     placeholder="0"
                     className="h-9 text-sm"
                     min="0"
-                    step="0.01" // Allows for decimal prices
+                    step="0.01" 
                   />
                 </TableCell>
                 <TableCell>
