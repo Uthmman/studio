@@ -60,3 +60,12 @@ export interface EstimationRecord {
   timestamp: number; // Timestamp of when the record was created/saved
   name?: string; // Optional user-defined name for saved estimates
 }
+
+// For displaying price entries in the admin panel, including combinations that might not have a price yet.
+export interface DisplayablePriceEntry extends PriceDataEntry {
+  description: string; // Full human-readable description of the combination
+  isPriced: boolean; // True if a price entry exists for this combination
+  categoryName: string; // Name of the category
+  featureDescription: string; // Description of selected features, e.g., "Material: Wood, Color: Red"
+  sizeLabel: string; // Label of the selected size
+}

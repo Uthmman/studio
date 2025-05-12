@@ -1,27 +1,22 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import type { FurnitureCategory, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig } from '@/lib/definitions';
+import type { FurnitureCategory, PriceDataEntry, DisplayablePriceEntry } from '@/lib/definitions';
 import {
-  FURNITURE_CATEGORIES as initialCategories,
+  FURNITURE_CATEGORIES as initialCategoriesData,
+  PRICE_DATA as initialPriceData,
   addCategory as addCategoryData,
   updateCategory as updateCategoryData,
   deleteCategory as deleteCategoryData,
-  addFeatureToCategory as addFeatureData,
-  updateFeatureInCategory as updateFeatureData,
-  deleteFeatureFromCategory as deleteFeatureData,
-  addOptionToFeature as addOptionData,
-  updateOptionInFeature as updateOptionData,
-  deleteOptionFromFeature as deleteOptionData,
-  addSizeToCategory as addSizeData,
-  updateSizeInCategory as updateSizeData,
-  deleteSizeFromCategory as deleteSizeData,
+  getAllPossibleCombinationsWithPrices, // New import
+  updateOrAddPriceData, // New import
 } from '@/lib/furniture-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { PlusCircle, Edit, Trash2, ShieldAlert, Settings } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, Settings, DollarSign } from 'lucide-react';
 import CategoryFormDialog from '@/components/admin/category-form-dialog';
+import PriceDataTable from '@/components/admin/price-data-table'; // New import
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -32,27 +27,27 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 
 export default function AdminFurniturePage() {
   const [categories, setCategories] = useState<FurnitureCategory[]>([]);
+  const [priceCombinations, setPriceCombinations] = useState<DisplayablePriceEntry[]>([]);
   const [isCategoryFormOpen, setIsCategoryFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<FurnitureCategory | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<FurnitureCategory | null>(null);
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    // Load initial data into state. This ensures we are working with a copy
-    // that can be updated to reflect changes in the UI during the session.
-    setCategories(JSON.parse(JSON.stringify(initialCategories)));
+  const refreshAdminData = useCallback(() => {
+    // Create deep copies to ensure re-render and avoid direct mutation of source
+    setCategories(JSON.parse(JSON.stringify(initialCategoriesData)));
+    setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices())));
   }, []);
 
-  const refreshCategories = () => {
-    // Create a deep copy to ensure re-render
-    setCategories(JSON.parse(JSON.stringify(initialCategories)));
-  };
+  useEffect(() => {
+    refreshAdminData();
+  }, [refreshAdminData]);
+
 
   const handleAddCategory = () => {
     setEditingCategory(null);
@@ -72,7 +67,7 @@ export default function AdminFurniturePage() {
     if (!categoryToDelete) return;
     const success = deleteCategoryData(categoryToDelete.id);
     if (success) {
-      refreshCategories(); // Refresh from the source of truth
+      refreshAdminData(); 
       toast({ title: "Category Deleted", description: `Category "${categoryToDelete.name}" has been deleted.` });
     } else {
       toast({ title: "Error", description: "Failed to delete category.", variant: "destructive" });
@@ -82,27 +77,22 @@ export default function AdminFurniturePage() {
 
   const handleCategoryFormSubmit = useCallback((categoryData: FurnitureCategory) => {
     let success: FurnitureCategory | null = null;
-    if (editingCategory) { // Update existing category
-      // Preserve existing features/sizes if not managed by form directly yet
+    if (editingCategory) {
       const fullCategoryData = { ...editingCategory, ...categoryData };
       success = updateCategoryData(fullCategoryData);
       if (success) {
         toast({ title: "Category Updated", description: `Category "${success.name}" has been updated.` });
       }
-    } else { // Add new category
+    } else {
       const newCategoryData: Omit<FurnitureCategory, 'id' | 'features' | 'sizes'> = {
         name: categoryData.name,
         iconName: categoryData.iconName,
         imagePlaceholder: categoryData.imagePlaceholder,
         imageAiHint: categoryData.imageAiHint,
       };
-      // The form now handles features and sizes, so 'addCategoryData' might need adjustment
-      // or 'categoryData' from the form is already complete.
-      // For simplicity, assuming categoryData from form IS the complete structure.
-      const newCat = addCategoryData(newCategoryData); // This function adds an empty category
-      // Then we update it with features and sizes from the form
+      const newCat = addCategoryData(newCategoryData);
       const finalNewCat = { ...newCat, features: categoryData.features, sizes: categoryData.sizes };
-      success = updateCategoryData(finalNewCat); // Effectively saving the features/sizes
+      success = updateCategoryData(finalNewCat); 
       
       if (success) {
         toast({ title: "Category Added", description: `Category "${success.name}" has been added.` });
@@ -110,13 +100,23 @@ export default function AdminFurniturePage() {
     }
 
     if (success) {
-      refreshCategories();
+      refreshAdminData();
     } else {
       toast({ title: "Error", description: "Failed to save category.", variant: "destructive" });
     }
     setIsCategoryFormOpen(false);
     setEditingCategory(null);
-  }, [editingCategory, toast]);
+  }, [editingCategory, toast, refreshAdminData]);
+
+  const handleSavePrice = useCallback((priceEntry: PriceDataEntry) => {
+    const result = updateOrAddPriceData(priceEntry);
+    if (result) {
+      refreshAdminData();
+      toast({ title: "Price Updated", description: `Price for the combination has been saved.` });
+    } else {
+      toast({ title: "Error Saving Price", description: "Failed to save price data. Check console for errors.", variant: "destructive" });
+    }
+  }, [toast, refreshAdminData]);
 
 
   return (
@@ -124,7 +124,7 @@ export default function AdminFurniturePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-2xl">Manage Furniture Categories</CardTitle>
+            <CardTitle className="text-2xl flex items-center"><Settings className="mr-2 h-6 w-6 text-primary" />Manage Furniture Categories</CardTitle>
             <CardDescription>Add, edit, or delete furniture categories, their features, and sizes.</CardDescription>
           </div>
           <Button onClick={handleAddCategory}>
@@ -199,18 +199,17 @@ export default function AdminFurniturePage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
-       <Card className="mt-8">
+      
+      <Card className="mt-8">
         <CardHeader>
-            <CardTitle className="text-xl flex items-center"><Settings className="mr-2 h-5 w-5 text-primary" />Price Data Management</CardTitle>
+            <CardTitle className="text-2xl flex items-center"><DollarSign className="mr-2 h-6 w-6 text-primary" />Manage Price Data</CardTitle>
             <CardDescription>
-                Price data is linked to categories, features, and sizes. Deleting any of these will also affect or remove related price entries.
-                Directly editing individual price entries is not supported in this interface. To modify prices, you would typically adjust the underlying data source (currently in-memory in <code>furniture-data.ts</code>).
+                Define or update price ranges for every possible combination of furniture category, features, and sizes.
+                Rows highlighted in light yellow indicate combinations that do not yet have a specific price entry.
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-sm text-muted-foreground">
-                For this demonstration, price data management is simplified. Focus is on managing the structure (categories, features, sizes) that price data depends on.
-            </p>
+            <PriceDataTable priceEntries={priceCombinations} onSavePrice={handleSavePrice} />
         </CardContent>
       </Card>
     </div>
