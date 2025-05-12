@@ -1,4 +1,4 @@
-import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig } from '@/lib/definitions';
+import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig, UserSelections } from '@/lib/definitions';
 import { generateId } from '@/lib/utils';
 
 // Make data mutable for in-session admin editing
@@ -14,98 +14,98 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
         id: 'sofas-feat-seats',
         name: 'Number of Seats',
         options: [
-          { id: 'sofas-feat-seats-opt-2', label: '2-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/100/80', imageAiHint: 'small sofa' },
-          { id: 'sofas-feat-seats-opt-3', label: '3-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'medium sofa' },
-          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional', iconName: 'GalleryVerticalEnd', imagePlaceholder: 'https://picsum.photos/150/100', imageAiHint: 'large sofa' },
+          { id: 'sofas-feat-seats-opt-2', label: '2-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/sofa2seater/400/300', imageAiHint: 'small sofa' },
+          { id: 'sofas-feat-seats-opt-3', label: '3-Seater', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/sofa3seater/400/300', imageAiHint: 'medium sofa' },
+          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional', iconName: 'GalleryVerticalEnd', imagePlaceholder: 'https://picsum.photos/seed/sofasectional/400/300', imageAiHint: 'large sofa' },
         ],
       },
       {
         id: 'sofas-feat-material',
         name: 'Upholstery Material',
         options: [
-          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric', iconName: 'GalleryThumbnails', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'fabric texture' },
-          { id: 'sofas-feat-material-opt-leather', label: 'Leather', iconName: 'Option', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'leather texture' },
-          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet', iconName: 'Sparkles', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'velvet texture' },
+          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric', iconName: 'GalleryThumbnails', imagePlaceholder: 'https://picsum.photos/seed/fabrictex/100/100', imageAiHint: 'fabric texture' },
+          { id: 'sofas-feat-material-opt-leather', label: 'Leather', iconName: 'Option', imagePlaceholder: 'https://picsum.photos/seed/leathertex/100/100', imageAiHint: 'leather texture' },
+          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet', iconName: 'Sparkles', imagePlaceholder: 'https://picsum.photos/seed/velvettes/100/100', imageAiHint: 'velvet texture' },
         ],
       },
       {
         id: 'sofas-feat-style',
         name: 'Style',
         options: [
-          { id: 'sofas-feat-style-opt-modern', label: 'Modern', iconName: 'Zap', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'modern design' },
-          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional', iconName: 'Grape', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'classic design' },
-          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century', iconName: 'Sun', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'retro design' },
+          { id: 'sofas-feat-style-opt-modern', label: 'Modern', iconName: 'Zap', imagePlaceholder: 'https://picsum.photos/seed/modernsofa/400/300', imageAiHint: 'modern sofa' },
+          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional', iconName: 'Grape', imagePlaceholder: 'https://picsum.photos/seed/tradsofa/400/300', imageAiHint: 'classic sofa' },
+          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century', iconName: 'Sun', imagePlaceholder: 'https://picsum.photos/seed/midcenturysofa/400/300', imageAiHint: 'retro sofa' },
         ],
       },
     ],
     sizes: [
-      { id: 'sofas-size-small', label: 'Small (50-69 inches)', iconName: 'Minimize2', imagePlaceholder: 'https://picsum.photos/80/60', imageAiHint: 'compact furniture' },
-      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)', iconName: 'AppWindow', imagePlaceholder: 'https://picsum.photos/100/75', imageAiHint: 'standard furniture' },
-      { id: 'sofas-size-large', label: 'Large (86+ inches)', iconName: 'Maximize2', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'spacious furniture' },
+      { id: 'sofas-size-small', label: 'Small (50-69 inches)', iconName: 'Minimize2', imagePlaceholder: 'https://picsum.photos/seed/smallfurniture/80/60', imageAiHint: 'compact furniture' },
+      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)', iconName: 'AppWindow', imagePlaceholder: 'https://picsum.photos/seed/mediumfurniture/100/75', imageAiHint: 'standard furniture' },
+      { id: 'sofas-size-large', label: 'Large (86+ inches)', iconName: 'Maximize2', imagePlaceholder: 'https://picsum.photos/seed/largefurniture/120/90', imageAiHint: 'spacious furniture' },
     ],
   },
   {
     id: 'tables',
     name: 'Dining Tables',
     iconName: 'Table2',
-    imagePlaceholder: 'https://picsum.photos/400/300',
+    imagePlaceholder: 'https://picsum.photos/seed/diningtablemain/400/300',
     imageAiHint: 'dining table',
     features: [
       {
         id: 'tables-feat-shape',
         name: 'Shape',
         options: [
-          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular', iconName: 'RectangleHorizontal', imagePlaceholder: 'https://picsum.photos/100/70', imageAiHint: 'rectangle table' },
-          { id: 'tables-feat-shape-opt-round', label: 'Round', iconName: 'Circle', imagePlaceholder: 'https://picsum.photos/90/90', imageAiHint: 'round table' },
-          { id: 'tables-feat-shape-opt-square', label: 'Square', iconName: 'Square', imagePlaceholder: 'https://picsum.photos/80/80', imageAiHint: 'square table' },
+          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular', iconName: 'RectangleHorizontal', imagePlaceholder: 'https://picsum.photos/seed/recttable/400/300', imageAiHint: 'rectangle table' },
+          { id: 'tables-feat-shape-opt-round', label: 'Round', iconName: 'Circle', imagePlaceholder: 'https://picsum.photos/seed/roundtable/400/300', imageAiHint: 'round table' },
+          { id: 'tables-feat-shape-opt-square', label: 'Square', iconName: 'Square', imagePlaceholder: 'https://picsum.photos/seed/squaretable/400/300', imageAiHint: 'square table' },
         ],
       },
       {
         id: 'tables-feat-material',
         name: 'Table Material',
         options: [
-          { id: 'tables-feat-material-opt-wood', label: 'Wood', iconName: 'TreeDeciduous', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'wood grain' },
-          { id: 'tables-feat-material-opt-glass', label: 'Glass', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'glass surface' }, // Placeholder icon, MinusSquare is not ideal
-          { id: 'tables-feat-material-opt-metal', label: 'Metal', iconName: 'Settings2', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'metal surface' }, // Placeholder icon
+          { id: 'tables-feat-material-opt-wood', label: 'Wood', iconName: 'TreeDeciduous', imagePlaceholder: 'https://picsum.photos/seed/woodgrain/100/100', imageAiHint: 'wood grain' },
+          { id: 'tables-feat-material-opt-glass', label: 'Glass', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/seed/glasssurface/100/100', imageAiHint: 'glass surface' }, 
+          { id: 'tables-feat-material-opt-metal', label: 'Metal', iconName: 'Settings2', imagePlaceholder: 'https://picsum.photos/seed/metalsurface/100/100', imageAiHint: 'metal surface' },
         ],
       },
     ],
     sizes: [
-      { id: 'tables-size-2-4', label: '2-4 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/80/60', imageAiHint: 'small group' },
-      { id: 'tables-size-4-6', label: '4-6 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/100/75', imageAiHint: 'medium group' },
-      { id: 'tables-size-6-8', label: '6-8 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/120/90', imageAiHint: 'large group' },
+      { id: 'tables-size-2-4', label: '2-4 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/table24/400/300', imageAiHint: 'small dining' },
+      { id: 'tables-size-4-6', label: '4-6 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/table46/400/300', imageAiHint: 'medium dining' },
+      { id: 'tables-size-6-8', label: '6-8 Person', iconName: 'Users', imagePlaceholder: 'https://picsum.photos/seed/table68/400/300', imageAiHint: 'large dining' },
     ],
   },
   {
     id: 'beds',
     name: 'Beds',
     iconName: 'BedDouble',
-    imagePlaceholder: 'https://picsum.photos/400/300',
+    imagePlaceholder: 'https://picsum.photos/seed/bedroombedmain/400/300',
     imageAiHint: 'bedroom bed',
     features: [
       {
         id: 'beds-feat-frame',
         name: 'Frame Material',
         options: [
-          { id: 'beds-feat-frame-opt-wood', label: 'Wood', iconName: 'Construction', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'wood frame' },
-          { id: 'beds-feat-frame-opt-metal', label: 'Metal', iconName: 'Shield', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'metal frame' }, // Placeholder icon
-          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered', iconName: 'Pillow', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'fabric frame' },
+          { id: 'beds-feat-frame-opt-wood', label: 'Wood', iconName: 'Construction', imagePlaceholder: 'https://picsum.photos/seed/woodframe/100/100', imageAiHint: 'wood frame' },
+          { id: 'beds-feat-frame-opt-metal', label: 'Metal', iconName: 'Shield', imagePlaceholder: 'https://picsum.photos/seed/metalframe/100/100', imageAiHint: 'metal frame' }, 
+          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered', iconName: 'Pillow', imagePlaceholder: 'https://picsum.photos/seed/upholsteredframe/100/100', imageAiHint: 'fabric frame' },
         ],
       },
       {
         id: 'beds-feat-headboard',
         name: 'Headboard',
         options: [
-          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard', iconName: 'SquareArrowUp', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'bed headboard' },
-          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/100/100', imageAiHint: 'simple bed' },
+          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard', iconName: 'SquareArrowUp', imagePlaceholder: 'https://picsum.photos/seed/bedheadboard/400/300', imageAiHint: 'bed headboard' },
+          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard', iconName: 'MinusSquare', imagePlaceholder: 'https://picsum.photos/seed/simplebed/400/300', imageAiHint: 'simple bed' },
         ],
       },
     ],
     sizes: [
-      { id: 'beds-size-twin', label: 'Twin', iconName: 'BedSingle', imagePlaceholder: 'https://picsum.photos/80/120', imageAiHint: 'single bed' },
-      { id: 'beds-size-full', label: 'Full', iconName: 'Bed', imagePlaceholder: 'https://picsum.photos/100/120', imageAiHint: 'double bed' },
-      { id: 'beds-size-queen', label: 'Queen', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/120/120', imageAiHint: 'queen size' },
-      { id: 'beds-size-king', label: 'King', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/140/120', imageAiHint: 'king size' }, // Using BedDouble, might need more distinct icons
+      { id: 'beds-size-twin', label: 'Twin', iconName: 'BedSingle', imagePlaceholder: 'https://picsum.photos/seed/twinbed/400/300', imageAiHint: 'single bed' },
+      { id: 'beds-size-full', label: 'Full', iconName: 'Bed', imagePlaceholder: 'https://picsum.photos/seed/fullbed/400/300', imageAiHint: 'double bed' },
+      { id: 'beds-size-queen', label: 'Queen', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/seed/queenbed/400/300', imageAiHint: 'queen size' },
+      { id: 'beds-size-king', label: 'King', iconName: 'BedDouble', imagePlaceholder: 'https://picsum.photos/seed/kingbed/400/300', imageAiHint: 'king size' },
     ],
   },
 ];
@@ -207,12 +207,12 @@ export const addOptionToFeature = (categoryId: string, featureId: string, option
   if (category) {
     const feature = category.features.find(f => f.id === featureId);
     if (feature) {
-      const newOption: FurnitureFeatureOption = { // Ensure all fields are initialized
+      const newOption: FurnitureFeatureOption = { 
         ...optionData,
         id: generateId(`${featureId}-opt`),
-        iconName: optionData.iconName || '', // provide default
-        imagePlaceholder: optionData.imagePlaceholder || 'https://picsum.photos/50/50', // provide default
-        imageAiHint: optionData.imageAiHint || '', // provide default
+        iconName: optionData.iconName || '', 
+        imagePlaceholder: optionData.imagePlaceholder || `https://picsum.photos/seed/${generateId('img')}/50/50`, 
+        imageAiHint: optionData.imageAiHint || '', 
       };
       feature.options.push(newOption);
       return newOption;
@@ -229,9 +229,9 @@ export const updateOptionInFeature = (categoryId: string, featureId: string, upd
       const optionIndex = feature.options.findIndex(o => o.id === updatedOption.id);
       if (optionIndex !== -1) {
         feature.options[optionIndex] = {
-            ...feature.options[optionIndex], // preserve existing fields
-            ...updatedOption, // overwrite with new data
-            imagePlaceholder: updatedOption.imagePlaceholder || 'https://picsum.photos/50/50',
+            ...feature.options[optionIndex], 
+            ...updatedOption, 
+            imagePlaceholder: updatedOption.imagePlaceholder || `https://picsum.photos/seed/${generateId('img')}/50/50`,
             imageAiHint: updatedOption.imageAiHint || updatedOption.label.toLowerCase(),
         };
         return feature.options[optionIndex];
@@ -248,10 +248,9 @@ export const deleteOptionFromFeature = (categoryId: string, featureId: string, o
     if (feature) {
       const initialLength = feature.options.length;
       feature.options = feature.options.filter(o => o.id !== optionId);
-       // Also remove related option from price data feature selections
       PRICE_DATA.forEach(p => {
         if (p.categoryId === categoryId && p.featureSelections[featureId] === optionId) {
-          delete p.featureSelections[featureId]; // Or set to a default/null if applicable
+          delete p.featureSelections[featureId]; 
         }
       });
       return feature.options.length < initialLength;
@@ -265,12 +264,12 @@ export const deleteOptionFromFeature = (categoryId: string, featureId: string, o
 export const addSizeToCategory = (categoryId: string, sizeData: Omit<FurnitureSizeConfig, 'id'>): FurnitureSizeConfig | null => {
   const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
   if (category) {
-    const newSize: FurnitureSizeConfig = { // Ensure all fields are initialized
+    const newSize: FurnitureSizeConfig = { 
       ...sizeData,
       id: generateId(`${categoryId}-size`),
-      iconName: sizeData.iconName || '', // provide default
-      imagePlaceholder: sizeData.imagePlaceholder || 'https://picsum.photos/80/80', // provide default
-      imageAiHint: sizeData.imageAiHint || '', // provide default
+      iconName: sizeData.iconName || '', 
+      imagePlaceholder: sizeData.imagePlaceholder || `https://picsum.photos/seed/${generateId('img')}/80/80`, 
+      imageAiHint: sizeData.imageAiHint || '', 
     };
     category.sizes.push(newSize);
     return newSize;
@@ -286,7 +285,7 @@ export const updateSizeInCategory = (categoryId: string, updatedSize: FurnitureS
       category.sizes[sizeIndex] = {
           ...category.sizes[sizeIndex],
           ...updatedSize,
-          imagePlaceholder: updatedSize.imagePlaceholder || 'https://picsum.photos/80/80',
+          imagePlaceholder: updatedSize.imagePlaceholder || `https://picsum.photos/seed/${generateId('img')}/80/80`,
           imageAiHint: updatedSize.imageAiHint || updatedSize.label.toLowerCase(),
       };
       return category.sizes[sizeIndex];
@@ -300,16 +299,12 @@ export const deleteSizeFromCategory = (categoryId: string, sizeId: string): bool
   if (category) {
     const initialLength = category.sizes.length;
     category.sizes = category.sizes.filter(s => s.id !== sizeId);
-    // Also remove related price data entries
     PRICE_DATA = PRICE_DATA.filter(p => !(p.categoryId === categoryId && p.sizeId === sizeId));
     return category.sizes.length < initialLength;
   }
   return false;
 };
 
-
-// Price Data (Simplified - focusing on category deletion impact)
-// More complex Price Data CRUD would involve matching features etc.
 
 export function getEstimatedPrice(
   categoryId: string | null,
@@ -326,32 +321,28 @@ export function getEstimatedPrice(
       return false;
     }
     
+    // Check features only if the category has features defined
     if (category.features.length > 0) {
+      // All features selected by the user for this category must match the price entry's features
       for (const feature of category.features) {
-        // If a feature defined in the category is not in item.featureSelections, it's not a match
-        // unless featureSelections for that feature is also undefined (meaning this feature combination wasn't specified)
-        // This logic might need refinement based on how partial feature matches are handled for pricing.
-        // For exact match:
-        if (featureSelections[feature.id] !== undefined && item.featureSelections[feature.id] !== featureSelections[feature.id]) {
+        const userSelectedOptionId = featureSelections[feature.id];
+        const priceEntryOptionId = item.featureSelections[feature.id];
+
+        // If the price entry specifies this feature, it must match the user's selection (or user didn't select this specific feature)
+        if (priceEntryOptionId !== undefined && userSelectedOptionId !== priceEntryOptionId) {
           return false;
         }
-         // If item.featureSelections has a specific value for a feature, but user's selections don't, it might still be a match depending on pricing rules
-         // For now, let's assume if a feature is in item.featureSelections, it must match or be absent in user selections.
-        if (item.featureSelections[feature.id] !== undefined && featureSelections[feature.id] === undefined) {
-            // This case is tricky: if price data is specific about a feature, but user hasn't selected it.
-            // For simplicity, let's require a match if item.featureSelections has it.
-            // Or, if PRICE_DATA can have entries without all features, this needs adjustment.
-            // A simpler model: if category.features has N features, PRICE_DATA has N featureSelections or fewer.
-            // The current PRICE_DATA entries seem to imply all relevant features for that price point are listed.
-        }
+        // If user selected an option for a feature, but price entry doesn't specify it, this price entry is not specific enough.
+        // However, many price entries might not list all features if they are "base" prices.
+        // This logic implies price entries must be fully specified if features are involved.
+        // A simpler check: only compare features present in item.featureSelections
       }
-      // Also check if user selections have features not in price entry (could mean a more specific item)
-       for (const userFeatureId in featureSelections) {
-           if (category.features.find(f => f.id === userFeatureId) && item.featureSelections[userFeatureId] === undefined && featureSelections[userFeatureId] !== undefined) {
-               // User selected a feature that this price entry doesn't specify. Could be a mismatch or a more generic price entry.
-               // For now, let's be strict: all selected features relevant to the category must match or be absent in the price data point.
-           }
+       for (const featureIdInPriceEntry in item.featureSelections) {
+         if (featureSelections[featureIdInPriceEntry] !== item.featureSelections[featureIdInPriceEntry]) {
+           return false;
+         }
        }
+
     }
     
     return true;
@@ -361,7 +352,7 @@ export function getEstimatedPrice(
 
 export function generateItemDescription(
   selections: UserSelections,
-  categories: FurnitureCategory[] // Use the potentially modified categories
+  categories: FurnitureCategory[] 
 ): string {
   if (!selections.categoryId) return "No item selected";
 
@@ -392,4 +383,52 @@ export function generateItemDescription(
   }
   
   return description;
+}
+
+export function getFinalImageForSelections(
+  selections: UserSelections,
+  allCategories: FurnitureCategory[]
+): { finalImageUrl: string | null; finalImageAiHint: string | null } {
+  if (!selections.categoryId) return { finalImageUrl: null, finalImageAiHint: null };
+
+  const category = allCategories.find(c => c.id === selections.categoryId);
+  if (!category) return { finalImageUrl: category?.imagePlaceholder || null, finalImageAiHint: category?.imageAiHint || null };
+
+  let finalImageUrl = category.imagePlaceholder;
+  let finalImageAiHint = category.imageAiHint;
+
+  // Prioritize size image if available
+  if (selections.sizeId) {
+    const sizeConfig = category.sizes.find(s => s.id === selections.sizeId);
+    if (sizeConfig?.imagePlaceholder) {
+      finalImageUrl = sizeConfig.imagePlaceholder;
+      finalImageAiHint = sizeConfig.imageAiHint || sizeConfig.label;
+    }
+  }
+  
+  // Then, check feature options. Last selected feature with an image might override.
+  // This logic can be adjusted based on which image is most representative.
+  // For simplicity, let's say a distinct feature option image (if any) takes precedence over size or category image.
+  // This might require a specific feature to be designated as primary for visuals.
+  // Current logic: category -> size (if image) -> specific feature option (if image, potentially last one iterated)
+
+  // Let's try to find the most "specific" image.
+  // If a feature option has a distinct image, it might be preferred.
+  // For this example, let's pick the image from the *first* feature that has a selected option with an image.
+  // This is arbitrary and can be refined.
+  for (const feature of category.features) {
+    const selectedOptionId = selections.featureSelections[feature.id];
+    if (selectedOptionId) {
+      const option = feature.options.find(opt => opt.id === selectedOptionId);
+      if (option?.imagePlaceholder) {
+        finalImageUrl = option.imagePlaceholder; // This will be the image of the first feature option with an image
+        finalImageAiHint = option.imageAiHint || option.label;
+        break; // Found a feature image, use it and stop.
+      }
+    }
+  }
+  // If no feature option image was found, and size image was not set, it defaults to category image.
+  // If size image WAS set, and no feature image found, it remains the size image.
+
+  return { finalImageUrl, finalImageAiHint };
 }

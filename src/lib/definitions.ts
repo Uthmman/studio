@@ -51,3 +51,12 @@ export type UserSelections = {
 };
 
 export type Step = 'category' | 'features' | 'size' | 'result';
+
+export interface EstimationRecord {
+  id: string; // Unique ID for the record
+  selections: UserSelections; // The selections that led to this estimate
+  description: string; // Generated item description
+  priceRange: PriceRange | null; // The estimated price
+  timestamp: number; // Timestamp of when the record was created/saved
+  name?: string; // Optional user-defined name for saved estimates
+}

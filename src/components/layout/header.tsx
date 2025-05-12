@@ -1,4 +1,4 @@
-import { Home, Settings } from 'lucide-react'; 
+import { Home, Settings, History as HistoryIcon } from 'lucide-react'; 
 import Link from 'next/link';
 
 export default function Header() {
@@ -11,7 +11,11 @@ export default function Header() {
             FurnitureFind
           </h1>
         </Link>
-        <nav>
+        <nav className="flex items-center gap-4">
+          <Link href="/history" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors" title="View Estimation History">
+            <HistoryIcon className="h-5 w-5" />
+            <span>History</span>
+          </Link>
           <Link href="/admin/furniture" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors" title="Manage Furniture Data">
             <Settings className="h-5 w-5" />
             <span>Admin</span>
