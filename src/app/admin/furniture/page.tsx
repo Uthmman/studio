@@ -122,12 +122,12 @@ export default function AdminFurniturePage() {
   return (
     <div className="space-y-8">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-2">
+          <div className="flex-grow">
             <CardTitle className="text-2xl flex items-center"><Settings className="mr-2 h-6 w-6 text-primary" />Manage Furniture Categories</CardTitle>
             <CardDescription>Add, edit, or delete furniture categories, their features, and sizes.</CardDescription>
           </div>
-          <Button onClick={handleAddCategory}>
+          <Button onClick={handleAddCategory} className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
           </Button>
         </CardHeader>
@@ -135,35 +135,37 @@ export default function AdminFurniturePage() {
           {categories.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No categories found. Add one to get started!</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Icon</TableHead>
-                  <TableHead>Features</TableHead>
-                  <TableHead>Sizes</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.iconName}</TableCell>
-                    <TableCell>{category.features.length}</TableCell>
-                    <TableCell>{category.sizes.length}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
-                        <Edit className="mr-1 h-4 w-4" /> Edit
-                      </Button>
-                      <Button variant="destructive" size="sm" onClick={() => confirmDeleteCategory(category)}>
-                        <Trash2 className="mr-1 h-4 w-4" /> Delete
-                      </Button>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Icon</TableHead>
+                    <TableHead>Features</TableHead>
+                    <TableHead>Sizes</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {categories.map((category) => (
+                    <TableRow key={category.id}>
+                      <TableCell className="font-medium whitespace-nowrap">{category.name}</TableCell>
+                      <TableCell className="whitespace-nowrap">{category.iconName}</TableCell>
+                      <TableCell>{category.features.length}</TableCell>
+                      <TableCell>{category.sizes.length}</TableCell>
+                      <TableCell className="text-right space-x-2 whitespace-nowrap">
+                        <Button variant="outline" size="sm" onClick={() => handleEditCategory(category)}>
+                          <Edit className="mr-1 h-4 w-4" /> Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => confirmDeleteCategory(category)}>
+                          <Trash2 className="mr-1 h-4 w-4" /> Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -206,12 +208,14 @@ export default function AdminFurniturePage() {
             <CardDescription>
                 Define or update price ranges for every possible combination of furniture category, features, and sizes.
                 Rows highlighted in light yellow indicate combinations that do not yet have a specific price entry.
+                Use horizontal scroll if needed to see all columns.
             </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
             <PriceDataTable priceEntries={priceCombinations} onSavePrice={handleSavePrice} />
+          </div>
         </CardContent>
       </Card>
     </div>
   );
-}

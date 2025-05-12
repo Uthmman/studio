@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -82,16 +81,16 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
   }
 
   return (
-    <ScrollArea className="max-h-[70vh] border rounded-md p-1">
-      <Table>
+    <ScrollArea className="max-h-[70vh] rounded-md"> {/* Removed border and p-1 as parent div in page.tsx now handles padding and can have border if needed */}
+      <Table> {/* Table component from shadcn/ui includes an internal div with overflow-auto for horizontal scrolling */}
         <TableHeader>
           <TableRow>
-            <TableHead className="sticky top-0 bg-card z-10">Category</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10">Features</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10">Size</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 w-[110px]">Min Price</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 w-[110px]">Max Price</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 text-right w-[110px]">Actions</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 min-w-[150px] whitespace-nowrap">Category</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 min-w-[250px] whitespace-nowrap">Features</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 min-w-[120px] whitespace-nowrap">Size</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 w-[110px] min-w-[110px] whitespace-nowrap">Min Price</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 w-[110px] min-w-[110px] whitespace-nowrap">Max Price</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 text-right w-[110px] min-w-[110px] whitespace-nowrap">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -104,32 +103,32 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
                 className={!entry.isPriced ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'}
                 data-testid={`price-row-${key}`}
               >
-                <TableCell className="font-medium min-w-[120px] whitespace-normal break-words">{entry.categoryName}</TableCell>
-                <TableCell className="text-sm text-muted-foreground min-w-[200px] whitespace-normal break-words">{entry.featureDescription}</TableCell>
-                <TableCell className="text-sm min-w-[100px] whitespace-normal break-words">{entry.sizeLabel}</TableCell>
-                <TableCell>
+                <TableCell className="font-medium whitespace-nowrap">{entry.categoryName}</TableCell>
+                <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{entry.featureDescription}</TableCell>
+                <TableCell className="text-sm whitespace-nowrap">{entry.sizeLabel}</TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Input
                     type="number"
                     value={currentEditPrices.min}
                     onChange={(e) => handleInputChange(key, 'min', e.target.value)}
                     placeholder="0"
-                    className="h-9 text-sm"
+                    className="h-9 text-sm w-full" // w-full ensures input takes cell width
                     min="0"
                     step="0.01" 
                   />
                 </TableCell>
-                <TableCell>
+                <TableCell className="whitespace-nowrap">
                   <Input
                     type="number"
                     value={currentEditPrices.max}
                     onChange={(e) => handleInputChange(key, 'max', e.target.value)}
                     placeholder="0"
-                    className="h-9 text-sm"
+                    className="h-9 text-sm w-full" // w-full ensures input takes cell width
                     min="0"
                     step="0.01"
                   />
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right whitespace-nowrap">
                   <Button variant="outline" size="sm" onClick={() => handleSave(entry)}>
                     <Save className="mr-1 h-3 w-3" /> {entry.isPriced ? 'Save' : 'Add'}
                   </Button>
@@ -142,4 +141,3 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
     </ScrollArea>
   );
 }
-
