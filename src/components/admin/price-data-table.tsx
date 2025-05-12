@@ -82,16 +82,16 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
   }
 
   return (
-    <ScrollArea className="h-[600px] border rounded-md p-1">
+    <ScrollArea className="max-h-[70vh] border rounded-md p-1">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="sticky top-0 bg-card z-10">Category</TableHead>
             <TableHead className="sticky top-0 bg-card z-10">Features</TableHead>
             <TableHead className="sticky top-0 bg-card z-10">Size</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 w-[120px]">Min Price</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 w-[120px]">Max Price</TableHead>
-            <TableHead className="sticky top-0 bg-card z-10 text-right w-[120px]">Actions</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 w-[110px]">Min Price</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 w-[110px]">Max Price</TableHead>
+            <TableHead className="sticky top-0 bg-card z-10 text-right w-[110px]">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -104,9 +104,9 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
                 className={!entry.isPriced ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'}
                 data-testid={`price-row-${key}`}
               >
-                <TableCell className="font-medium">{entry.categoryName}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{entry.featureDescription}</TableCell>
-                <TableCell className="text-sm">{entry.sizeLabel}</TableCell>
+                <TableCell className="font-medium min-w-[120px] whitespace-normal break-words">{entry.categoryName}</TableCell>
+                <TableCell className="text-sm text-muted-foreground min-w-[200px] whitespace-normal break-words">{entry.featureDescription}</TableCell>
+                <TableCell className="text-sm min-w-[100px] whitespace-normal break-words">{entry.sizeLabel}</TableCell>
                 <TableCell>
                   <Input
                     type="number"
@@ -142,3 +142,4 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
     </ScrollArea>
   );
 }
+
