@@ -27,6 +27,8 @@ function safelySetInLocalStorage<T>(key: string, value: T) {
     return;
   }
   try {
+    // The value passed here is already serialized by JSON.parse(JSON.stringify())
+    // So, we can directly stringify it again for localStorage.
     window.localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
     console.error(`Error writing to localStorage key “${key}”:`, error);
@@ -54,7 +56,8 @@ export function useEstimationStorage() {
 
     setHistory(prevHistory => {
       const updatedHistory = [newHistoryItem, ...prevHistory].slice(0, MAX_HISTORY_ITEMS);
-      safelySetInLocalStorage(HISTORY_STORAGE_KEY, updatedHistory);
+      const serializableHistory = JSON.parse(JSON.stringify(updatedHistory));
+      safelySetInLocalStorage(HISTORY_STORAGE_KEY, serializableHistory);
       return updatedHistory;
     });
   }, []);
@@ -80,13 +83,13 @@ export function useEstimationStorage() {
 
       if (existingItemIndex > -1) {
         wasDuplicate = true;
-        // No change if duplicate found, but ensure localStorage reflects current state if it was somehow out of sync.
-        // This typically isn't strictly necessary if prevSaved is always accurate.
-        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, prevSaved); 
+        const serializableSaved = JSON.parse(JSON.stringify(prevSaved));
+        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, serializableSaved); 
         return prevSaved; 
       } else {
         const updatedSaved = [newSavedItem, ...prevSaved];
-        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, updatedSaved);
+        const serializableSaved = JSON.parse(JSON.stringify(updatedSaved));
+        safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, serializableSaved);
         itemAdded = true;
         return updatedSaved;
       }
@@ -101,18 +104,18 @@ export function useEstimationStorage() {
 
   const deleteSavedEstimate = useCallback((id: string) => {
     let itemWasDeleted = false;
-    let deletedItemName = "Estimate"; // Default name
+    let deletedItemName = "Estimate"; 
 
     setSavedEstimates(prevSaved => {
       const itemIndex = prevSaved.findIndex(item => item.id === id);
       if (itemIndex === -1) {
-        // Item not found, no change
         return prevSaved;
       }
       
       deletedItemName = prevSaved[itemIndex].name || prevSaved[itemIndex].description;
       const updatedSaved = prevSaved.filter(item => item.id !== id);
-      safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, updatedSaved);
+      const serializableSaved = JSON.parse(JSON.stringify(updatedSaved));
+      safelySetInLocalStorage(SAVED_ESTIMATES_STORAGE_KEY, serializableSaved);
       itemWasDeleted = true;
       return updatedSaved;
     });
@@ -124,7 +127,7 @@ export function useEstimationStorage() {
   
   const clearHistory = useCallback(() => {
     setHistory([]);
-    safelySetInLocalStorage(HISTORY_STORAGE_KEY, []);
+    safelySetInLocalStorage(HISTORY_STORAGE_KEY, []); // Save empty array
     toast({ title: "History Cleared", description: "Your estimation history has been cleared." });
   }, [toast]);
 

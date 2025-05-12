@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({ // Corrected instantiation
 export const metadata: Metadata = {
   title: 'FurnitureFind', // Updated title
   description: 'Estimate furniture prices with FurnitureFind',
+  manifest: '/manifest.json', // Added manifest for PWA
 };
 
 export default function RootLayout({
