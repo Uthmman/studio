@@ -15,6 +15,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import React from "react"; // Added React import
 
 const optionSchema = z.object({
   label: z.string().min(1, "Label is required"),
