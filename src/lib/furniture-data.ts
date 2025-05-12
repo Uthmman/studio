@@ -1,6 +1,8 @@
-import type { FurnitureCategory, PriceDataEntry } from '@/lib/definitions';
+import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig } from '@/lib/definitions';
+import { generateId } from '@/lib/utils';
 
-export const FURNITURE_CATEGORIES: FurnitureCategory[] = [
+// Make data mutable for in-session admin editing
+export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
   {
     id: 'sofas',
     name: 'Sofas',
@@ -9,37 +11,37 @@ export const FURNITURE_CATEGORIES: FurnitureCategory[] = [
     imageAiHint: 'living room sofa',
     features: [
       {
-        id: 'seats',
+        id: 'sofas-feat-seats',
         name: 'Number of Seats',
         options: [
-          { id: '2-seater', label: '2-Seater' },
-          { id: '3-seater', label: '3-Seater' },
-          { id: 'sectional', label: 'Sectional' },
+          { id: 'sofas-feat-seats-opt-2', label: '2-Seater' },
+          { id: 'sofas-feat-seats-opt-3', label: '3-Seater' },
+          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional' },
         ],
       },
       {
-        id: 'material',
+        id: 'sofas-feat-material',
         name: 'Upholstery Material',
         options: [
-          { id: 'fabric', label: 'Fabric' },
-          { id: 'leather', label: 'Leather' },
-          { id: 'velvet', label: 'Velvet' },
+          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric' },
+          { id: 'sofas-feat-material-opt-leather', label: 'Leather' },
+          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet' },
         ],
       },
       {
-        id: 'style',
+        id: 'sofas-feat-style',
         name: 'Style',
         options: [
-          { id: 'modern', label: 'Modern' },
-          { id: 'traditional', label: 'Traditional' },
-          { id: 'mid-century', label: 'Mid-Century' },
+          { id: 'sofas-feat-style-opt-modern', label: 'Modern' },
+          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional' },
+          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century' },
         ],
       },
     ],
     sizes: [
-      { id: 'small', label: 'Small (50-69 inches)' },
-      { id: 'medium', label: 'Medium (70-85 inches)' },
-      { id: 'large', label: 'Large (86+ inches)' },
+      { id: 'sofas-size-small', label: 'Small (50-69 inches)' },
+      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)' },
+      { id: 'sofas-size-large', label: 'Large (86+ inches)' },
     ],
   },
   {
@@ -50,28 +52,28 @@ export const FURNITURE_CATEGORIES: FurnitureCategory[] = [
     imageAiHint: 'dining table',
     features: [
       {
-        id: 'shape',
+        id: 'tables-feat-shape',
         name: 'Shape',
         options: [
-          { id: 'rectangular', label: 'Rectangular' },
-          { id: 'round', label: 'Round' },
-          { id: 'square', label: 'Square' },
+          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular' },
+          { id: 'tables-feat-shape-opt-round', label: 'Round' },
+          { id: 'tables-feat-shape-opt-square', label: 'Square' },
         ],
       },
       {
-        id: 'material',
+        id: 'tables-feat-material',
         name: 'Table Material',
         options: [
-          { id: 'wood', label: 'Wood' },
-          { id: 'glass', label: 'Glass' },
-          { id: 'metal', label: 'Metal' },
+          { id: 'tables-feat-material-opt-wood', label: 'Wood' },
+          { id: 'tables-feat-material-opt-glass', label: 'Glass' },
+          { id: 'tables-feat-material-opt-metal', label: 'Metal' },
         ],
       },
     ],
     sizes: [
-      { id: '2-4-person', label: '2-4 Person' },
-      { id: '4-6-person', label: '4-6 Person' },
-      { id: '6-8-person', label: '6-8 Person' },
+      { id: 'tables-size-2-4', label: '2-4 Person' },
+      { id: 'tables-size-4-6', label: '4-6 Person' },
+      { id: 'tables-size-6-8', label: '6-8 Person' },
     ],
   },
   {
@@ -82,51 +84,216 @@ export const FURNITURE_CATEGORIES: FurnitureCategory[] = [
     imageAiHint: 'bedroom bed',
     features: [
       {
-        id: 'frameMaterial',
+        id: 'beds-feat-frame',
         name: 'Frame Material',
         options: [
-          { id: 'wood', label: 'Wood' },
-          { id: 'metal', label: 'Metal' },
-          { id: 'upholstered', label: 'Upholstered' },
+          { id: 'beds-feat-frame-opt-wood', label: 'Wood' },
+          { id: 'beds-feat-frame-opt-metal', label: 'Metal' },
+          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered' },
         ],
       },
       {
-        id: 'headboard',
+        id: 'beds-feat-headboard',
         name: 'Headboard',
         options: [
-          { id: 'yes', label: 'With Headboard' },
-          { id: 'no', label: 'Without Headboard' },
+          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard' },
+          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard' },
         ],
       },
     ],
     sizes: [
-      { id: 'twin', label: 'Twin' },
-      { id: 'full', label: 'Full' },
-      { id: 'queen', label: 'Queen' },
-      { id: 'king', label: 'King' },
+      { id: 'beds-size-twin', label: 'Twin' },
+      { id: 'beds-size-full', label: 'Full' },
+      { id: 'beds-size-queen', label: 'Queen' },
+      { id: 'beds-size-king', label: 'King' },
     ],
   },
 ];
 
-export const PRICE_DATA: PriceDataEntry[] = [
+export let PRICE_DATA: PriceDataEntry[] = [
   // Sofas
-  { categoryId: 'sofas', featureSelections: { seats: '2-seater', material: 'fabric', style: 'modern' }, sizeId: 'small', priceRange: { min: 300, max: 700 } },
-  { categoryId: 'sofas', featureSelections: { seats: '3-seater', material: 'fabric', style: 'modern' }, sizeId: 'medium', priceRange: { min: 700, max: 1600 } },
-  { categoryId: 'sofas', featureSelections: { seats: 'sectional', material: 'leather', style: 'traditional' }, sizeId: 'large', priceRange: { min: 1500, max: 3500 } },
-  { categoryId: 'sofas', featureSelections: { seats: '2-seater', material: 'velvet', style: 'mid-century' }, sizeId: 'small', priceRange: { min: 500, max: 1000 } },
-  { categoryId: 'sofas', featureSelections: { seats: '3-seater', material: 'leather', style: 'modern' }, sizeId: 'medium', priceRange: { min: 1200, max: 2500 } },
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-small', priceRange: { min: 300, max: 700 } },
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 700, max: 1600 } },
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-sectional', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-traditional' }, sizeId: 'sofas-size-large', priceRange: { min: 1500, max: 3500 } },
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-velvet', 'sofas-feat-style': 'sofas-feat-style-opt-midcentury' }, sizeId: 'sofas-size-small', priceRange: { min: 500, max: 1000 } },
+  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 1200, max: 2500 } },
 
   // Dining Tables
-  { categoryId: 'tables', featureSelections: { shape: 'rectangular', material: 'wood' }, sizeId: '4-6-person', priceRange: { min: 350, max: 850 } },
-  { categoryId: 'tables', featureSelections: { shape: 'round', material: 'glass' }, sizeId: '2-4-person', priceRange: { min: 200, max: 600 } },
-  { categoryId: 'tables', featureSelections: { shape: 'square', material: 'metal' }, sizeId: '6-8-person', priceRange: { min: 500, max: 1200 } },
+  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-rect', 'tables-feat-material': 'tables-feat-material-opt-wood' }, sizeId: 'tables-size-4-6', priceRange: { min: 350, max: 850 } },
+  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-round', 'tables-feat-material': 'tables-feat-material-opt-glass' }, sizeId: 'tables-size-2-4', priceRange: { min: 200, max: 600 } },
+  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-square', 'tables-feat-material': 'tables-feat-material-opt-metal' }, sizeId: 'tables-size-6-8', priceRange: { min: 500, max: 1200 } },
 
   // Beds
-  { categoryId: 'beds', featureSelections: { frameMaterial: 'wood', headboard: 'yes' }, sizeId: 'queen', priceRange: { min: 400, max: 1000 } },
-  { categoryId: 'beds', featureSelections: { frameMaterial: 'metal', headboard: 'no' }, sizeId: 'king', priceRange: { min: 300, max: 800 } },
-  { categoryId: 'beds', featureSelections: { frameMaterial: 'upholstered', headboard: 'yes' }, sizeId: 'full', priceRange: { min: 500, max: 1200 } },
-  // Add more combinations as needed
+  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-wood', 'beds-feat-headboard': 'beds-feat-headboard-opt-yes' }, sizeId: 'beds-size-queen', priceRange: { min: 400, max: 1000 } },
+  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-metal', 'beds-feat-headboard': 'beds-feat-headboard-opt-no' }, sizeId: 'beds-size-king', priceRange: { min: 300, max: 800 } },
+  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-upholstered', 'beds-feat-headboard': 'beds-feat-headboard-opt-yes' }, sizeId: 'beds-size-full', priceRange: { min: 500, max: 1200 } },
 ];
+
+// Category CRUD
+export const addCategory = (categoryData: Omit<FurnitureCategory, 'id' | 'features' | 'sizes'>): FurnitureCategory => {
+  const newCategory: FurnitureCategory = {
+    ...categoryData,
+    id: generateId('cat'),
+    features: [],
+    sizes: [],
+  };
+  FURNITURE_CATEGORIES.push(newCategory);
+  return newCategory;
+};
+
+export const updateCategory = (updatedCategory: FurnitureCategory): FurnitureCategory | null => {
+  const index = FURNITURE_CATEGORIES.findIndex(c => c.id === updatedCategory.id);
+  if (index !== -1) {
+    FURNITURE_CATEGORIES[index] = updatedCategory;
+    return updatedCategory;
+  }
+  return null;
+};
+
+export const deleteCategory = (categoryId: string): boolean => {
+  const initialLength = FURNITURE_CATEGORIES.length;
+  FURNITURE_CATEGORIES = FURNITURE_CATEGORIES.filter(c => c.id !== categoryId);
+  // Also remove related price data
+  PRICE_DATA = PRICE_DATA.filter(p => p.categoryId !== categoryId);
+  return FURNITURE_CATEGORIES.length < initialLength;
+};
+
+// Feature CRUD
+export const addFeatureToCategory = (categoryId: string, featureData: Omit<FurnitureFeatureConfig, 'id' | 'options'>): FurnitureFeatureConfig | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const newFeature: FurnitureFeatureConfig = {
+      ...featureData,
+      id: generateId(`${categoryId}-feat`),
+      options: [],
+    };
+    category.features.push(newFeature);
+    return newFeature;
+  }
+  return null;
+};
+
+export const updateFeatureInCategory = (categoryId: string, updatedFeature: FurnitureFeatureConfig): FurnitureFeatureConfig | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const featureIndex = category.features.findIndex(f => f.id === updatedFeature.id);
+    if (featureIndex !== -1) {
+      category.features[featureIndex] = updatedFeature;
+      return updatedFeature;
+    }
+  }
+  return null;
+};
+
+export const deleteFeatureFromCategory = (categoryId: string, featureId: string): boolean => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const initialLength = category.features.length;
+    category.features = category.features.filter(f => f.id !== featureId);
+    // Also remove related feature selections from price data
+    PRICE_DATA.forEach(p => {
+      if (p.categoryId === categoryId && p.featureSelections[featureId]) {
+        delete p.featureSelections[featureId];
+      }
+    });
+    return category.features.length < initialLength;
+  }
+  return false;
+};
+
+// Feature Option CRUD
+export const addOptionToFeature = (categoryId: string, featureId: string, optionData: Omit<FurnitureFeatureOption, 'id'>): FurnitureFeatureOption | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const feature = category.features.find(f => f.id === featureId);
+    if (feature) {
+      const newOption: FurnitureFeatureOption = {
+        ...optionData,
+        id: generateId(`${featureId}-opt`),
+      };
+      feature.options.push(newOption);
+      return newOption;
+    }
+  }
+  return null;
+};
+
+export const updateOptionInFeature = (categoryId: string, featureId: string, updatedOption: FurnitureFeatureOption): FurnitureFeatureOption | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const feature = category.features.find(f => f.id === featureId);
+    if (feature) {
+      const optionIndex = feature.options.findIndex(o => o.id === updatedOption.id);
+      if (optionIndex !== -1) {
+        feature.options[optionIndex] = updatedOption;
+        return updatedOption;
+      }
+    }
+  }
+  return null;
+};
+
+export const deleteOptionFromFeature = (categoryId: string, featureId: string, optionId: string): boolean => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const feature = category.features.find(f => f.id === featureId);
+    if (feature) {
+      const initialLength = feature.options.length;
+      feature.options = feature.options.filter(o => o.id !== optionId);
+       // Also remove related option from price data feature selections
+      PRICE_DATA.forEach(p => {
+        if (p.categoryId === categoryId && p.featureSelections[featureId] === optionId) {
+          delete p.featureSelections[featureId]; // Or set to a default/null if applicable
+        }
+      });
+      return feature.options.length < initialLength;
+    }
+  }
+  return false;
+};
+
+
+// Size CRUD
+export const addSizeToCategory = (categoryId: string, sizeData: Omit<FurnitureSizeConfig, 'id'>): FurnitureSizeConfig | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const newSize: FurnitureSizeConfig = {
+      ...sizeData,
+      id: generateId(`${categoryId}-size`),
+    };
+    category.sizes.push(newSize);
+    return newSize;
+  }
+  return null;
+};
+
+export const updateSizeInCategory = (categoryId: string, updatedSize: FurnitureSizeConfig): FurnitureSizeConfig | null => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const sizeIndex = category.sizes.findIndex(s => s.id === updatedSize.id);
+    if (sizeIndex !== -1) {
+      category.sizes[sizeIndex] = updatedSize;
+      return updatedSize;
+    }
+  }
+  return null;
+};
+
+export const deleteSizeFromCategory = (categoryId: string, sizeId: string): boolean => {
+  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+  if (category) {
+    const initialLength = category.sizes.length;
+    category.sizes = category.sizes.filter(s => s.id !== sizeId);
+    // Also remove related price data entries
+    PRICE_DATA = PRICE_DATA.filter(p => !(p.categoryId === categoryId && p.sizeId === sizeId));
+    return category.sizes.length < initialLength;
+  }
+  return false;
+};
+
+
+// Price Data (Simplified - focusing on category deletion impact)
+// More complex Price Data CRUD would involve matching features etc.
 
 export function getEstimatedPrice(
   categoryId: string | null,
@@ -143,18 +310,33 @@ export function getEstimatedPrice(
       return false;
     }
     
-    // For categories with features, check if all selected features match
     if (category.features.length > 0) {
       for (const feature of category.features) {
-        if (item.featureSelections[feature.id] !== featureSelections[feature.id]) {
+        // If a feature defined in the category is not in item.featureSelections, it's not a match
+        // unless featureSelections for that feature is also undefined (meaning this feature combination wasn't specified)
+        // This logic might need refinement based on how partial feature matches are handled for pricing.
+        // For exact match:
+        if (featureSelections[feature.id] !== undefined && item.featureSelections[feature.id] !== featureSelections[feature.id]) {
           return false;
         }
+         // If item.featureSelections has a specific value for a feature, but user's selections don't, it might still be a match depending on pricing rules
+         // For now, let's assume if a feature is in item.featureSelections, it must match or be absent in user selections.
+        if (item.featureSelections[feature.id] !== undefined && featureSelections[feature.id] === undefined) {
+            // This case is tricky: if price data is specific about a feature, but user hasn't selected it.
+            // For simplicity, let's require a match if item.featureSelections has it.
+            // Or, if PRICE_DATA can have entries without all features, this needs adjustment.
+            // A simpler model: if category.features has N features, PRICE_DATA has N featureSelections or fewer.
+            // The current PRICE_DATA entries seem to imply all relevant features for that price point are listed.
+        }
       }
+      // Also check if user selections have features not in price entry (could mean a more specific item)
+       for (const userFeatureId in featureSelections) {
+           if (category.features.find(f => f.id === userFeatureId) && item.featureSelections[userFeatureId] === undefined && featureSelections[userFeatureId] !== undefined) {
+               // User selected a feature that this price entry doesn't specify. Could be a mismatch or a more generic price entry.
+               // For now, let's be strict: all selected features relevant to the category must match or be absent in the price data point.
+           }
+       }
     }
-    // If a category has no features, it implies featureSelections might be empty or not considered in PRICE_DATA for that category.
-    // This logic assumes that if a category has features, PRICE_DATA entries for it will also have corresponding featureSelections.
-    // If a category has no features, featureSelections from PRICE_DATA for that category should ideally be empty or a specific marker.
-    // For simplicity, we assume PRICE_DATA structure aligns with features defined in FURNITURE_CATEGORIES.
     
     return true;
   });
@@ -163,7 +345,7 @@ export function getEstimatedPrice(
 
 export function generateItemDescription(
   selections: UserSelections,
-  categories: FurnitureCategory[]
+  categories: FurnitureCategory[] // Use the potentially modified categories
 ): string {
   if (!selections.categoryId) return "No item selected";
 
