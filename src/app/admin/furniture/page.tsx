@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
@@ -8,15 +9,15 @@ import {
   addCategory as addCategoryData,
   updateCategory as updateCategoryData,
   deleteCategory as deleteCategoryData,
-  getAllPossibleCombinationsWithPrices, // New import
-  updateOrAddPriceData, // New import
+  getAllPossibleCombinationsWithPrices,
+  updateOrAddPriceData,
 } from '@/lib/furniture-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit, Trash2, Settings, DollarSign } from 'lucide-react';
 import CategoryFormDialog from '@/components/admin/category-form-dialog';
-import PriceDataTable from '@/components/admin/price-data-table'; // New import
+import PriceDataTable from '@/components/admin/price-data-table';
 import { useToast } from "@/hooks/use-toast";
 import {
   AlertDialog,
@@ -39,7 +40,6 @@ export default function AdminFurniturePage() {
   const { toast } = useToast();
 
   const refreshAdminData = useCallback(() => {
-    // Create deep copies to ensure re-render and avoid direct mutation of source
     setCategories(JSON.parse(JSON.stringify(initialCategoriesData)));
     setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices())));
   }, []);
@@ -135,7 +135,7 @@ export default function AdminFurniturePage() {
           {categories.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">No categories found. Add one to get started!</p>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -212,10 +212,12 @@ export default function AdminFurniturePage() {
             </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          {/* This div now controls scrolling and max-height for the PriceDataTable */}
+          <div className="overflow-auto max-h-[70vh] rounded-md border">
             <PriceDataTable priceEntries={priceCombinations} onSavePrice={handleSavePrice} />
           </div>
         </CardContent>
       </Card>
     </div>
   );
+}
