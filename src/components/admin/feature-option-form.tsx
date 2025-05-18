@@ -16,12 +16,17 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
-import React from "react"; 
+import React, { useState, useEffect } from "react";
+import NextImage from "next/image";
+import { UploadCloud } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 const optionSchema = z.object({
   label: z.string().min(1, "Label is required"),
   iconName: z.string().optional(),
-  imagePlaceholder: z.string().url("Must be a valid URL for placeholder image").or(z.literal("")).optional(),
+  imagePlaceholder: z.string().refine(val => val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val === '', {
+    message: "Must be a valid Data URI, URL, or empty",
+  }).optional(),
   imageAiHint: z.string().max(50, "AI hint too long").optional(),
 });
 type OptionFormData = z.infer<typeof optionSchema>;
@@ -36,6 +41,14 @@ interface FeatureOptionFormProps {
 
 const DEFAULT_FEATURE_OPTION_PLACEHOLDER = "https://placehold.co/50x50.png";
 
+// Helper to convert File to Data URI
+const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
 export default function FeatureOptionForm({
   isOpen,
   onClose,
@@ -43,58 +56,112 @@ export default function FeatureOptionForm({
   initialData,
   featureName,
 }: FeatureOptionFormProps) {
+  const { toast } = useToast();
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
   } = useForm<OptionFormData>({
     resolver: zodResolver(optionSchema),
-    defaultValues: initialData 
-      ? { 
+    defaultValues: initialData
+      ? {
           label: initialData.label,
           iconName: initialData.iconName || "",
           imagePlaceholder: initialData.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
           imageAiHint: initialData.imageAiHint || "",
-        } 
+        }
       : { label: "", iconName: "", imagePlaceholder: DEFAULT_FEATURE_OPTION_PLACEHOLDER, imageAiHint: "" },
   });
 
-  React.useEffect(() => {
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER);
+  const watchedImagePlaceholder = watch("imagePlaceholder");
+
+  useEffect(() => {
     if (isOpen) {
-      const defaultVals = initialData 
-        ? { 
+      const defaultVals = initialData
+        ? {
             label: initialData.label,
             iconName: initialData.iconName || "",
             imagePlaceholder: initialData.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
             imageAiHint: initialData.imageAiHint || "",
-          } 
+          }
         : { label: "", iconName: "", imagePlaceholder: DEFAULT_FEATURE_OPTION_PLACEHOLDER, imageAiHint: "" };
       reset(defaultVals);
+      setSelectedImageFile(null);
+      setImagePreview(initialData?.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER);
     }
   }, [initialData, reset, isOpen]);
 
-  const handleFormSubmit = (data: OptionFormData) => {
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    if (selectedImageFile) {
+      objectUrl = URL.createObjectURL(selectedImageFile);
+      setImagePreview(objectUrl);
+    } else {
+      setImagePreview(watchedImagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER);
+    }
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [selectedImageFile, watchedImagePlaceholder]);
+
+  const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      if (file.size > 1024 * 1024) { // 1MB
+        toast({
+          title: "Image Too Large",
+          description: "Please select an image smaller than 1MB for Data URI storage.",
+          variant: "destructive",
+        });
+        setSelectedImageFile(null);
+        event.target.value = "";
+        return;
+      }
+      setSelectedImageFile(file);
+    } else {
+      setSelectedImageFile(null);
+    }
+  };
+
+  const handleFormSubmit = async (data: OptionFormData) => {
+    let finalImagePlaceholder = data.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER;
+    if (selectedImageFile) {
+      try {
+        const dataUri = await fileToDataUri(selectedImageFile);
+        finalImagePlaceholder = dataUri;
+      } catch (error) {
+        console.error("Error converting file to Data URI:", error);
+        toast({ title: "Image Processing Failed", description: "Could not process image. Previous or default image will be used.", variant: "destructive" });
+      }
+    }
+
     const submissionData = {
-        ...data,
-        imagePlaceholder: data.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
-        imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0,2).join(" "),
+      ...data,
+      imagePlaceholder: finalImagePlaceholder,
+      imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0, 2).join(" "),
     };
     onSubmit(submissionData, initialData?.id);
-    onClose();
+    // onClose(); // Parent handles closing typically
   };
 
   if (!isOpen) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) { onClose(); setSelectedImageFile(null); } }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Edit" : "Add"} Option for {featureName}
           </DialogTitle>
           <DialogDescription>
-            Define an option for the feature, including visual details. Use placehold.co for image URLs.
+            Define an option for the feature. Images are stored as Data URIs (max 1MB).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -105,6 +172,7 @@ export default function FeatureOptionForm({
               {...register("label")}
               placeholder="e.g., Red, Large, With Arms"
               className={errors.label ? "border-destructive" : ""}
+              disabled={isSubmitting}
             />
             {errors.label && (
               <p className="text-sm text-destructive mt-1">
@@ -119,6 +187,7 @@ export default function FeatureOptionForm({
               {...register("iconName")}
               placeholder="e.g., Check, Circle, Zap (optional)"
               className={errors.iconName ? "border-destructive" : ""}
+              disabled={isSubmitting}
             />
             {errors.iconName && (
               <p className="text-sm text-destructive mt-1">
@@ -126,28 +195,50 @@ export default function FeatureOptionForm({
               </p>
             )}
           </div>
-          <div>
-            <Label htmlFor="imagePlaceholder">Image Placeholder URL</Label>
-            <Input
-              id="imagePlaceholder"
-              {...register("imagePlaceholder")}
-              placeholder={DEFAULT_FEATURE_OPTION_PLACEHOLDER}
-              className={errors.imagePlaceholder ? "border-destructive" : ""}
-            />
-            {errors.imagePlaceholder && (
-              <p className="text-sm text-destructive mt-1">
-                {errors.imagePlaceholder.message}
-              </p>
+
+          <div className="space-y-2">
+            <Label htmlFor="optionImage">Option Image (Max 1MB)</Label>
+            {imagePreview && (
+              <div className="mt-2 relative w-full aspect-square max-w-[100px] rounded-md border overflow-hidden bg-muted">
+                <NextImage src={imagePreview} alt="Option preview" fill style={{ objectFit: 'contain' }} sizes="100px" />
+              </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Default: {DEFAULT_FEATURE_OPTION_PLACEHOLDER}</p>
+            <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" onClick={() => document.getElementById('optionImageUpload')?.click()} className="flex-1" disabled={isSubmitting}>
+                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
+                </Button>
+                 {selectedImageFile && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => {
+                        setSelectedImageFile(null);
+                        (document.getElementById('optionImageUpload') as HTMLInputElement).value = "";
+                        setValue("imagePlaceholder", initialData?.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER);
+                        setImagePreview(initialData?.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER);
+                    }} disabled={isSubmitting}>
+                        Clear
+                    </Button>
+                )}
+            </div>
+            <Input
+              id="optionImageUpload"
+              type="file"
+              accept="image/png, image/jpeg, image/gif, image/webp"
+              onChange={handleImageFileChange}
+              className="hidden"
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground">Upload PNG, JPG, GIF, WEBP. Max 1MB.</p>
+            {errors.imagePlaceholder && <p className="text-sm text-destructive mt-1">{errors.imagePlaceholder.message}</p>}
           </div>
-           <div>
+          <input type="hidden" {...register("imagePlaceholder")} />
+
+          <div>
             <Label htmlFor="imageAiHint">Image AI Hint (max 2 words)</Label>
             <Input
               id="imageAiHint"
               {...register("imageAiHint")}
               placeholder="e.g., wood grain"
               className={errors.imageAiHint ? "border-destructive" : ""}
+              disabled={isSubmitting}
             />
             {errors.imageAiHint && (
               <p className="text-sm text-destructive mt-1">
@@ -156,10 +247,12 @@ export default function FeatureOptionForm({
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => { onClose(); setSelectedImageFile(null);}} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit">{initialData ? "Save Changes" : "Add Option"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : (initialData ? "Save Changes" : "Add Option")}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

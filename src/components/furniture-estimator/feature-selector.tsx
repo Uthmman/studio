@@ -5,43 +5,39 @@ import type { FurnitureFeatureConfig, UserSelections, FurnitureCategory } from '
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox
+import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import Image from 'next/image';
+import NextImage from 'next/image'; // Renamed import
 import * as LucideIcons from 'lucide-react';
 
 interface FeatureSelectorProps {
   features: FurnitureFeatureConfig[];
   currentSelections: UserSelections['featureSelections'];
-  onFeatureSelect: (featureId: string, optionId: string, isSelected?: boolean) => void; // isSelected for checkboxes
+  onFeatureSelect: (featureId: string, optionId: string, isSelected?: boolean) => void;
   onNext: () => void;
   onBack: () => void;
   categoryName: string;
   categoryImageURL: string;
   categoryImageAiHint: string;
-  allCategories: FurnitureCategory[]; // Keep if needed for context, or remove if not used
+  allCategories: FurnitureCategory[];
 }
 
-export default function FeatureSelector({ 
-  features, 
-  currentSelections, 
-  onFeatureSelect, 
-  onNext, 
-  onBack, 
+export default function FeatureSelector({
+  features,
+  currentSelections,
+  onFeatureSelect,
+  onNext,
+  onBack,
   categoryName,
   categoryImageURL,
   categoryImageAiHint,
-  // allCategories // currently unused
 }: FeatureSelectorProps) {
 
   const allFeaturesSelected = features.every(feature => {
     const selection = currentSelections[feature.id];
     if (feature.selectionType === 'multiple') {
-      // For multi-select, considered "selected" if it has options and at least one is chosen,
-      // or if it has no options (vacuously true).
       return feature.options.length === 0 || (Array.isArray(selection) && selection.length > 0);
     }
-    // For single-select, must have a non-empty string selection.
     return !!selection;
   });
 
@@ -53,7 +49,7 @@ export default function FeatureSelector({
       </CardHeader>
       <CardContent className="p-6">
         <div className="relative aspect-video w-full overflow-hidden rounded-md mb-6 border">
-            <Image
+            <NextImage // Changed to NextImage
               src={categoryImageURL}
               alt={`${categoryName} representative image`}
               fill
@@ -70,21 +66,39 @@ export default function FeatureSelector({
               {feature.selectionType === 'multiple' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
                   {feature.options.map((option) => {
-                    const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : LucideIcons.Minus;
+                    const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : null;
                     const isChecked = Array.isArray(currentSelections[feature.id]) && (currentSelections[feature.id] as string[]).includes(option.id);
                     return (
                       <Label
                         key={option.id}
                         htmlFor={`${feature.id}-${option.id}`}
-                        className="flex items-center space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
+                        className="flex items-start space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
                       >
                         <Checkbox
                           id={`${feature.id}-${option.id}`}
                           checked={isChecked}
                           onCheckedChange={(checked) => onFeatureSelect(feature.id, option.id, !!checked)}
+                          className="mt-1" // Align checkbox better if images make label taller
                         />
-                        <IconComponent className="h-5 w-5 text-current" />
-                        <span>{option.label}</span>
+                        <div className="flex flex-col items-start">
+                           <div className="flex items-center gap-2">
+                            {IconComponent && <IconComponent className="h-5 w-5 text-current" />}
+                            <span>{option.label}</span>
+                           </div>
+                          {option.imagePlaceholder && (
+                            <div className="mt-2 relative w-20 h-20 rounded-md border overflow-hidden bg-muted">
+                              <NextImage // Changed to NextImage
+                                src={option.imagePlaceholder}
+                                alt={option.label}
+                                fill
+                                style={{ objectFit: 'contain' }}
+                                sizes="80px"
+                                data-ai-hint={option.imageAiHint || option.label}
+                                className="p-1"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </Label>
                     );
                   })}
@@ -97,16 +111,33 @@ export default function FeatureSelector({
                   className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2"
                 >
                   {feature.options.map((option) => {
-                    const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : LucideIcons.Minus;
+                    const IconComponent = option.iconName ? (LucideIcons as any)[option.iconName] || LucideIcons.Minus : null;
                     return (
                       <Label
                         key={option.id}
                         htmlFor={`${feature.id}-${option.id}`}
-                        className="flex items-center space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
+                        className="flex items-start space-x-3 p-3 border rounded-md cursor-pointer hover:bg-accent/10 transition-colors has-[:checked]:bg-accent has-[:checked]:text-accent-foreground has-[:checked]:border-primary"
                       >
-                        <RadioGroupItem value={option.id} id={`${feature.id}-${option.id}`} />
-                        <IconComponent className="h-5 w-5 text-current" />
-                        <span>{option.label}</span>
+                        <RadioGroupItem value={option.id} id={`${feature.id}-${option.id}`} className="mt-1" />
+                        <div className="flex flex-col items-start">
+                            <div className="flex items-center gap-2">
+                                {IconComponent && <IconComponent className="h-5 w-5 text-current" />}
+                                <span>{option.label}</span>
+                            </div>
+                          {option.imagePlaceholder && (
+                            <div className="mt-2 relative w-20 h-20 rounded-md border overflow-hidden bg-muted">
+                              <NextImage // Changed to NextImage
+                                src={option.imagePlaceholder}
+                                alt={option.label}
+                                fill
+                                style={{ objectFit: 'contain' }}
+                                sizes="80px"
+                                data-ai-hint={option.imageAiHint || option.label}
+                                className="p-1"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </Label>
                     );
                   })}

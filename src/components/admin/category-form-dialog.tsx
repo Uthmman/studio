@@ -25,15 +25,17 @@ import FeatureFormDialog from "./feature-form-dialog";
 import SizeFormDialog from "./size-form-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { generateId } from "@/lib/utils";
-import NextImage from "next/image"; // Renamed to avoid conflict with Lucide's Image icon
+import NextImage from "next/image";
 import * as LucideIcons from "lucide-react";
 
 const DEFAULT_PLACEHOLDER_URL = "https://placehold.co/400x300.png";
+const DEFAULT_OPTION_PLACEHOLDER_DISPLAY = "https://placehold.co/50x50.png";
+const DEFAULT_SIZE_PLACEHOLDER_DISPLAY = "https://placehold.co/80x80.png";
+
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required"),
   iconName: z.string().min(1, "Icon name is required (e.g., Sofa, BedDouble from lucide-react)"),
-  // imagePlaceholder will store the Data URI string or a placeholder URL
   imagePlaceholder: z.string().refine(val => val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val === '', {
     message: "Must be a valid Data URI, URL, or empty",
   }).optional(),
@@ -48,7 +50,6 @@ interface CategoryFormDialogProps {
   initialData?: FurnitureCategory | null;
 }
 
-// Helper to convert File to Data URI
 const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
   reader.onload = () => resolve(reader.result as string);
@@ -86,7 +87,7 @@ export default function CategoryFormDialog({
 
   const [features, setFeatures] = useState<FurnitureFeatureConfig[]>(initialData?.features || []);
   const [sizes, setSizes] = useState<FurnitureSizeConfig[]>(initialData?.sizes || []);
-  
+
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL);
 
@@ -129,7 +130,6 @@ export default function CategoryFormDialog({
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
       const file = event.target.files[0];
-      // Basic validation for image size (e.g., 1MB for Data URIs)
       if (file.size > 1024 * 1024) { // 1MB
         toast({
           title: "Image Too Large",
@@ -137,7 +137,7 @@ export default function CategoryFormDialog({
           variant: "destructive",
         });
         setSelectedImageFile(null);
-        event.target.value = ""; // Clear the input
+        event.target.value = "";
         return;
       }
       setSelectedImageFile(file);
@@ -158,11 +158,10 @@ export default function CategoryFormDialog({
       try {
         const dataUri = await fileToDataUri(selectedImageFile);
         finalImagePlaceholder = dataUri;
-        setValue("imagePlaceholder", dataUri); // Update RHF state with Data URI
+        setValue("imagePlaceholder", dataUri);
       } catch (error) {
         console.error("Error converting file to Data URI:", error);
         toast({ title: "Image Processing Failed", description: "Could not process image. Previous or default image will be used.", variant: "destructive" });
-        // Keep finalImagePlaceholder as data.imagePlaceholder (which could be old URL or default)
       }
     }
 
@@ -170,34 +169,31 @@ export default function CategoryFormDialog({
       id: initialData?.id || generateId('cat'),
       name: data.name,
       iconName: data.iconName,
-      imagePlaceholder: finalImagePlaceholder, 
-      imageAiHint: data.imageAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(" "), 
+      imagePlaceholder: finalImagePlaceholder,
+      imageAiHint: data.imageAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(" "),
       features,
       sizes,
     };
     onSubmit(completeCategoryData);
-    // onClose(); // Parent usually handles closing
   };
 
-  // Feature Management
   const handleAddFeature = () => { setEditingFeature(null); setIsFeatureFormOpen(true); };
   const handleEditFeature = (feature: FurnitureFeatureConfig) => { setEditingFeature(feature); setIsFeatureFormOpen(true); };
   const handleDeleteFeature = (featureId: string) => { setFeatures(prev => prev.filter(f => f.id !== featureId)); toast({ title: "Feature Deleted" }); };
   const handleFeatureFormSubmit = useCallback((fd: { name: string; selectionType: 'single' | 'multiple' }, opts: FurnitureFeatureOption[], fId?: string) => {
-    const completeOpts = opts.map(opt => ({ ...opt, id: opt.id.startsWith('temp-') ? generateId('opt') : opt.id, iconName: opt.iconName || "", imagePlaceholder: opt.imagePlaceholder || "https://placehold.co/50x50.png", imageAiHint: opt.imageAiHint || opt.label.toLowerCase().split(" ").slice(0,2).join(" ") }));
+    const completeOpts = opts.map(opt => ({ ...opt, id: opt.id.startsWith('temp-') ? generateId('opt') : opt.id, iconName: opt.iconName || "", imagePlaceholder: opt.imagePlaceholder || DEFAULT_OPTION_PLACEHOLDER_DISPLAY, imageAiHint: opt.imageAiHint || opt.label.toLowerCase().split(" ").slice(0,2).join(" ") }));
     if (fId) { setFeatures(prev => prev.map(f => f.id === fId ? { ...f, name: fd.name, selectionType: fd.selectionType, options: completeOpts } : f)); toast({ title: "Feature Updated"});
     } else { const newFeat: FurnitureFeatureConfig = { id: generateId('feat'), name: fd.name, selectionType: fd.selectionType, options: completeOpts }; setFeatures(prev => [...prev, newFeat]); toast({ title: "Feature Added"}); }
     setIsFeatureFormOpen(false);
   }, [toast]);
 
-  // Size Management
   const [isSizeFormOpen, setIsSizeFormOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<FurnitureSizeConfig | null>(null);
   const handleAddSize = () => { setEditingSize(null); setIsSizeFormOpen(true); };
   const handleEditSize = (size: FurnitureSizeConfig) => { setEditingSize(size); setIsSizeFormOpen(true); };
   const handleDeleteSize = (sizeId: string) => { setSizes(prev => prev.filter(s => s.id !== sizeId)); toast({ title: "Size Deleted"}); };
   const handleSizeFormSubmit = useCallback((sd: { label: string; iconName?: string; imagePlaceholder?: string; imageAiHint?: string }, sId?: string) => {
-    const completeSize = { ...sd, iconName: sd.iconName || "", imagePlaceholder: sd.imagePlaceholder || "https://placehold.co/80x80.png", imageAiHint: sd.imageAiHint || sd.label.toLowerCase().split(" ").slice(0,2).join(" ") };
+    const completeSize = { ...sd, iconName: sd.iconName || "", imagePlaceholder: sd.imagePlaceholder || DEFAULT_SIZE_PLACEHOLDER_DISPLAY, imageAiHint: sd.imageAiHint || sd.label.toLowerCase().split(" ").slice(0,2).join(" ") };
     if (sId) { setSizes(prev => prev.map(s => s.id === sId ? { ...s, ...completeSize } : s)); toast({ title: "Size Updated"});
     } else { const newSize: FurnitureSizeConfig = { id: generateId('size'), ...completeSize }; setSizes(prev => [...prev, newSize]); toast({ title: "Size Added"}); }
     setIsSizeFormOpen(false);
@@ -218,7 +214,7 @@ export default function CategoryFormDialog({
             Manage the category details, its features, available sizes, and image. Images will be stored as Data URIs (max 1MB).
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(80vh-100px)] pr-6"> 
+        <ScrollArea className="max-h-[calc(80vh-100px)] pr-6">
           <div className="space-y-6 py-4">
             <Card>
               <CardHeader>
@@ -227,15 +223,15 @@ export default function CategoryFormDialog({
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="name">Category Name</Label>
-                  <Input id="name" {...register("name")} placeholder="e.g., Sofas, Dining Tables" className={categoryErrors.name ? "border-destructive" : ""} />
+                  <Input id="name" {...register("name")} placeholder="e.g., Sofas, Dining Tables" className={categoryErrors.name ? "border-destructive" : ""} disabled={isSubmitting} />
                   {categoryErrors.name && <p className="text-sm text-destructive mt-1">{categoryErrors.name.message}</p>}
                 </div>
                 <div>
                   <Label htmlFor="iconName">Icon Name (from lucide-react)</Label>
-                  <Input id="iconName" {...register("iconName")} placeholder="e.g., Sofa, BedDouble, Table2" className={categoryErrors.iconName ? "border-destructive" : ""} />
+                  <Input id="iconName" {...register("iconName")} placeholder="e.g., Sofa, BedDouble, Table2" className={categoryErrors.iconName ? "border-destructive" : ""} disabled={isSubmitting} />
                   {categoryErrors.iconName && <p className="text-sm text-destructive mt-1">{categoryErrors.iconName.message}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="categoryImage">Category Image (Max 1MB)</Label>
                   {imagePreview && (
@@ -244,16 +240,16 @@ export default function CategoryFormDialog({
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <Button type="button" variant="outline" onClick={() => document.getElementById('categoryImageUpload')?.click()} className="flex-1">
+                    <Button type="button" variant="outline" onClick={() => document.getElementById('categoryImageUpload')?.click()} className="flex-1" disabled={isSubmitting}>
                         <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
                     </Button>
                      {selectedImageFile && (
                         <Button type="button" variant="ghost" size="sm" onClick={() => {
                             setSelectedImageFile(null);
-                            (document.getElementById('categoryImageUpload') as HTMLInputElement).value = ""; // Clear file input
-                            setValue("imagePlaceholder", initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL); // Reset to original or default
+                            (document.getElementById('categoryImageUpload') as HTMLInputElement).value = "";
+                            setValue("imagePlaceholder", initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL);
                             setImagePreview(initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL);
-                        }}>
+                        }} disabled={isSubmitting}>
                             Clear Selection
                         </Button>
                     )}
@@ -264,14 +260,15 @@ export default function CategoryFormDialog({
                     accept="image/png, image/jpeg, image/gif, image/webp"
                     onChange={handleImageFileChange}
                     className="hidden"
+                    disabled={isSubmitting}
                   />
-                  <p className="text-xs text-muted-foreground">Upload PNG, JPG, GIF, WEBP. Max 1MB (stored as Data URI).</p>
+                  <p className="text-xs text-muted-foreground">Upload PNG, JPG, GIF, WEBP. Max 1MB.</p>
                    {categoryErrors.imagePlaceholder && <p className="text-sm text-destructive mt-1">{categoryErrors.imagePlaceholder.message}</p>}
                 </div>
 
                 <div>
-                  <Label htmlFor="imageAiHint">Image AI Hint (max 2 words for image generation/search)</Label>
-                  <Input id="imageAiHint" {...register("imageAiHint")} placeholder="e.g., living room sofa" className={categoryErrors.imageAiHint ? "border-destructive" : ""} />
+                  <Label htmlFor="imageAiHint">Image AI Hint (max 2 words)</Label>
+                  <Input id="imageAiHint" {...register("imageAiHint")} placeholder="e.g., living room sofa" className={categoryErrors.imageAiHint ? "border-destructive" : ""} disabled={isSubmitting}/>
                   {categoryErrors.imageAiHint && <p className="text-sm text-destructive mt-1">{categoryErrors.imageAiHint.message}</p>}
                 </div>
                 <input type="hidden" {...register("imagePlaceholder")} />
@@ -280,15 +277,15 @@ export default function CategoryFormDialog({
 
             <Tabs defaultValue="features">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="features">Manage Features</TabsTrigger>
-                <TabsTrigger value="sizes">Manage Sizes</TabsTrigger>
+                <TabsTrigger value="features" disabled={isSubmitting}>Manage Features</TabsTrigger>
+                <TabsTrigger value="sizes" disabled={isSubmitting}>Manage Sizes</TabsTrigger>
               </TabsList>
               <TabsContent value="features">
                 <Card>
                   <CardHeader>
                     <div className="flex justify-between items-center">
                       <CardTitle>Features</CardTitle>
-                      <Button type="button" variant="outline" size="sm" onClick={handleAddFeature}><PlusCircle className="mr-2 h-4 w-4" />Add Feature</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={handleAddFeature} disabled={isSubmitting}><PlusCircle className="mr-2 h-4 w-4" />Add Feature</Button>
                     </div>
                     <CardDescription>Define customizable features for this category.</CardDescription>
                   </CardHeader>
@@ -305,8 +302,8 @@ export default function CategoryFormDialog({
                               <span className="text-xs text-muted-foreground">({feature.selectionType || 'single'} select)</span>
                             </div>
                             <div className="space-x-1">
-                              <Button type="button" variant="ghost" size="icon" onClick={() => handleEditFeature(feature)} title="Edit feature"><Edit className="h-4 w-4" /></Button>
-                              <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteFeature(feature.id)} title="Delete feature" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => handleEditFeature(feature)} title="Edit feature" disabled={isSubmitting}><Edit className="h-4 w-4" /></Button>
+                              <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteFeature(feature.id)} title="Delete feature" className="text-destructive hover:text-destructive" disabled={isSubmitting}><Trash2 className="h-4 w-4" /></Button>
                             </div>
                           </div>
                           <ul className="list-none pl-0 space-y-2">
@@ -316,14 +313,15 @@ export default function CategoryFormDialog({
                                 <li key={opt.id} className="text-sm text-muted-foreground flex items-center space-x-2 p-1 bg-background/50 rounded">
                                   {OptIcon && <OptIcon className="h-4 w-4 text-primary" />}
                                   {opt.imagePlaceholder && (
-                                    <div className="relative w-8 h-8 rounded-sm overflow-hidden border">
-                                      <NextImage 
-                                        src={opt.imagePlaceholder} 
-                                        alt={opt.label} 
+                                    <div className="relative w-8 h-8 rounded-sm overflow-hidden border bg-muted">
+                                      <NextImage
+                                        src={opt.imagePlaceholder}
+                                        alt={opt.label}
                                         fill
-                                        style={{ objectFit: 'cover' }}
-                                        sizes="(max-width: 768px) 50vw, 33vw"
+                                        style={{ objectFit: 'contain' }}
+                                        sizes="32px"
                                         data-ai-hint={opt.imageAiHint || opt.label}
+                                        className="p-0.5"
                                       />
                                     </div>
                                   )}
@@ -344,7 +342,7 @@ export default function CategoryFormDialog({
                   <CardHeader>
                      <div className="flex justify-between items-center">
                         <CardTitle>Sizes</CardTitle>
-                        <Button type="button" variant="outline" size="sm" onClick={handleAddSize}><PlusCircle className="mr-2 h-4 w-4" />Add Size</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={handleAddSize} disabled={isSubmitting}><PlusCircle className="mr-2 h-4 w-4" />Add Size</Button>
                      </div>
                     <CardDescription>Define available sizes for this category.</CardDescription>
                   </CardHeader>
@@ -359,22 +357,23 @@ export default function CategoryFormDialog({
                                 <div className="flex items-center space-x-2">
                                   {SizeIcon && <SizeIcon className="h-5 w-5 text-primary" />}
                                   {size.imagePlaceholder && (
-                                    <div className="relative w-10 h-10 rounded-sm overflow-hidden border">
-                                      <NextImage 
-                                        src={size.imagePlaceholder} 
-                                        alt={size.label} 
+                                    <div className="relative w-10 h-10 rounded-sm overflow-hidden border bg-muted">
+                                      <NextImage
+                                        src={size.imagePlaceholder}
+                                        alt={size.label}
                                         fill
-                                        style={{ objectFit: 'cover' }}
-                                        sizes="(max-width: 768px) 50vw, 33vw"
+                                        style={{ objectFit: 'contain' }}
+                                        sizes="40px"
                                         data-ai-hint={size.imageAiHint || size.label}
+                                        className="p-0.5"
                                       />
                                     </div>
                                   )}
                                   <span className="text-sm text-foreground">{size.label}</span>
                                 </div>
                                 <div className="space-x-1">
-                                <Button type="button" variant="ghost" size="icon" onClick={() => handleEditSize(size)} title="Edit size"><Edit className="h-4 w-4" /></Button>
-                                <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteSize(size.id)} title="Delete size" className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleEditSize(size)} title="Edit size" disabled={isSubmitting}><Edit className="h-4 w-4" /></Button>
+                                <Button type="button" variant="ghost" size="icon" onClick={() => handleDeleteSize(size.id)} title="Delete size" className="text-destructive hover:text-destructive" disabled={isSubmitting}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             </div>
                           );
@@ -388,9 +387,9 @@ export default function CategoryFormDialog({
         </ScrollArea>
         <DialogFooter className="pt-4 border-t">
           <Button type="button" variant="outline" onClick={() => { onClose(); setSelectedImageFile(null);}} disabled={isSubmitting}>Cancel</Button>
-          <Button 
-            type="button" 
-            onClick={handleCategorySubmit(handleFullSubmit)} 
+          <Button
+            type="button"
+            onClick={handleCategorySubmit(handleFullSubmit)}
             disabled={isSubmitting}
           >
             {isSubmitting ? "Saving..." : (initialData ? "Save Changes" : "Create Category")}
