@@ -112,11 +112,17 @@ export async function getEstimatedPrice(
     if (priceDocSnap.exists()) {
       const data = priceDocSnap.data();
       // Document stores { priceRange: PriceRange, overrideImageUrl?: string, overrideImageAiHint?: string }
+      // Ensure priceRange exists and is valid, otherwise this function might contribute to issues if it returns
+      // an object where data.priceRange is undefined.
+      const priceRange = data.priceRange && typeof data.priceRange.min === 'number' && typeof data.priceRange.max === 'number'
+        ? data.priceRange as PriceRange
+        : undefined; // Set to undefined if not valid, so downstream can default it.
+
       return {
         categoryId,
         featureSelections: featureSelectionsFromUser,
         sizeId,
-        priceRange: data.priceRange as PriceRange,
+        priceRange: priceRange || {min: 0, max: 0}, // Default if not found or invalid from DB
         overrideImageUrl: data.overrideImageUrl as string | undefined,
         overrideImageAiHint: data.overrideImageAiHint as string | undefined,
       };
@@ -334,9 +340,11 @@ export async function getAllPossibleCombinationsWithPrices(
           featureDescription: featureDescription,
           sizeId: size.id,
           sizeLabel: size.label,
-          priceRange: existingPriceEntry ? existingPriceEntry.priceRange : { min: 0, max: 0 },
+          priceRange: (existingPriceEntry && existingPriceEntry.priceRange && typeof existingPriceEntry.priceRange.min === 'number' && typeof existingPriceEntry.priceRange.max === 'number') 
+            ? existingPriceEntry.priceRange 
+            : { min: 0, max: 0 },
           description: fullDescription,
-          isPriced: !!existingPriceEntry,
+          isPriced: !!(existingPriceEntry && existingPriceEntry.priceRange),
           imageUrl: displayImageUrl,
           imageAiHint: displayImageAiHint,
           overrideImageUrl: existingPriceEntry?.overrideImageUrl,
@@ -350,7 +358,7 @@ export async function getAllPossibleCombinationsWithPrices(
 
 export async function updateOrAddPriceData(
   entry: PriceDataEntry,
-  _categoriesFromFirestore: FurnitureCategory[]
+  _categoriesFromFirestore: FurnitureCategory[] // This parameter might not be strictly necessary if we are only dealing with Firestore prices
 ): Promise<PriceDataEntry | null> {
   if (entry.priceRange.min < 0 || entry.priceRange.max < 0 || entry.priceRange.min > entry.priceRange.max) {
     console.error("Invalid price range for update/add:", entry.priceRange);
@@ -369,21 +377,16 @@ export async function updateOrAddPriceData(
       priceRange: entry.priceRange,
     };
 
-    if (entry.overrideImageUrl) {
+    if (entry.overrideImageUrl || entry.overrideImageUrl === '') { // Check for empty string to clear
       dataToSave.overrideImageUrl = entry.overrideImageUrl;
       dataToSave.overrideImageAiHint = entry.overrideImageAiHint || '';
-    } else {
-      // If overrideImageUrl is explicitly set to empty or null, ensure it's removed from Firestore.
-      // Firestore treats undefined fields as "do not change" in merge, but null/empty will remove.
-      // To be safe, we can explicitly set them to null if they are meant to be cleared.
-      dataToSave.overrideImageUrl = ''; // Or use deleteField() if you want to remove the field entirely
-      dataToSave.overrideImageAiHint = '';
     }
     
-    await setDoc(priceDocRef, dataToSave, { merge: true }); // Use merge to avoid overwriting other fields if any
+    await setDoc(priceDocRef, dataToSave, { merge: true }); 
     return entry;
   } catch (error) {
     console.error("Error saving price to Firestore:", error);
     return null;
   }
 }
+
