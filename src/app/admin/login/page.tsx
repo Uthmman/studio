@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ShieldKeyhole, LogIn } from 'lucide-react';
+import { Shield, LogIn } from 'lucide-react'; // Changed ShieldKeyhole to Shield
 import { auth } from '@/lib/firebase'; // Import Firebase auth
 import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
     return (
         <div className="flex min-h-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center space-y-2">
-                <ShieldKeyhole className="h-12 w-12 text-primary animate-pulse" />
+                <Shield className="h-12 w-12 text-primary animate-pulse" /> {/* Changed ShieldKeyhole to Shield */}
                 <p className="text-muted-foreground">Checking authentication status...</p>
             </div>
         </div>
@@ -77,7 +77,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center">
-          <ShieldKeyhole className="mx-auto h-12 w-12 text-primary mb-4" />
+          <Shield className="mx-auto h-12 w-12 text-primary mb-4" /> {/* Changed ShieldKeyhole to Shield */}
           <CardTitle className="text-2xl">Admin Login</CardTitle>
           <CardDescription>Enter your credentials to access the admin panel.</CardDescription>
         </CardHeader>
@@ -130,3 +130,4 @@ export default function AdminLoginPage() {
     </div>
   );
 }
+
