@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { ShieldKeyhole, LogIn } from 'lucide-react';
 import { auth } from '@/lib/firebase'; // Import Firebase auth
-import { signInWithEmailAndPassword, onAuthStateChanged }_ from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 
 
