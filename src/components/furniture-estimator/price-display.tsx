@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { PriceRange, UserSelections, FurnitureCategory } from '@/lib/definitions';
@@ -11,9 +12,11 @@ interface PriceDisplayProps {
   priceRange: PriceRange | null;
   itemName: string;
   onStartOver: () => void;
-  onSave: () => void; // New prop to handle saving
+  onSave: () => void;
   currentSelections: UserSelections;
   allCategories: FurnitureCategory[];
+  overrideImageUrl?: string; // New prop
+  overrideImageAiHint?: string; // New prop
 }
 
 export default function PriceDisplay({ 
@@ -22,9 +25,22 @@ export default function PriceDisplay({
   onStartOver, 
   onSave,
   currentSelections,
-  allCategories
+  allCategories,
+  overrideImageUrl, // Destructure new prop
+  overrideImageAiHint, // Destructure new prop
 }: PriceDisplayProps) {
-  const { finalImageUrl, finalImageAiHint } = getFinalImageForSelections(currentSelections, allCategories);
+  
+  let displayImageUrl: string;
+  let displayImageAiHint: string;
+
+  if (overrideImageUrl) {
+    displayImageUrl = overrideImageUrl;
+    displayImageAiHint = overrideImageAiHint || itemName.split(" ").slice(0,2).join(" ") || 'furniture item';
+  } else {
+    const derivedImage = getFinalImageForSelections(currentSelections, allCategories);
+    displayImageUrl = derivedImage.finalImageUrl;
+    displayImageAiHint = derivedImage.finalImageAiHint || itemName.split(" ").slice(0,2).join(" ") || 'furniture item';
+  }
 
   return (
     <Card className="w-full max-w-lg mx-auto shadow-xl">
@@ -32,15 +48,15 @@ export default function PriceDisplay({
         <CardTitle className="text-3xl font-semibold tracking-tight text-foreground">Price Estimation Result</CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
-        {finalImageUrl && (
+        {displayImageUrl && (
           <div className="relative aspect-video w-full overflow-hidden rounded-md mb-4 border shadow-md">
             <Image
-              src={finalImageUrl}
+              src={displayImageUrl} // Use the determined display image URL
               alt={`Final selected: ${itemName}`}
               fill
               style={{ objectFit: 'cover' }}
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              data-ai-hint={finalImageAiHint || itemName.split(" ").slice(0,2).join(" ")}
+              data-ai-hint={displayImageAiHint} // Use the determined AI hint
               priority
             />
           </div>

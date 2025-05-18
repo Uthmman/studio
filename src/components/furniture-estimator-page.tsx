@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, PriceDataEntry } from '@/lib/definitions'; // Added PriceDataEntry
-import { getEstimatedPrice, generateItemDescription, getFirebaseCategories, getFinalImageForSelections } from '@/lib/furniture-data';
+import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, PriceDataEntry } from '@/lib/definitions';
+import { getEstimatedPrice, generateItemDescription, getFirebaseCategories } from '@/lib/furniture-data';
 import CategorySelector from '@/components/furniture-estimator/category-selector';
 import FeatureSelector from '@/components/furniture-estimator/feature-selector';
 import SizeSelector from '@/components/furniture-estimator/size-selector';
@@ -20,17 +20,26 @@ const initialSelections: UserSelections = {
   sizeId: null,
 };
 
+// Updated state structure for currentEstimationData
+interface CurrentEstimationData {
+  priceRange: PriceRange | null;
+  description: string;
+  selections: UserSelections;
+  overrideImageUrl?: string;
+  overrideImageAiHint?: string;
+}
+
 export default function FurnitureEstimatorPage() {
   const [step, setStep] = useState<Step>('category');
   const [selections, setSelections] = useState<UserSelections>(initialSelections);
-  const [currentEstimationData, setCurrentEstimationData] = useState<{priceRange: PriceRange | null, description: string, selections: UserSelections} | null>(null);
+  const [currentEstimationData, setCurrentEstimationData] = useState<CurrentEstimationData | null>(null);
   
   const { addHistoryItem, addSavedEstimate } = useEstimationStorage();
   const [isSaveDialogVisible, setIsSaveDialogVisible] = useState(false);
 
   const [liveCategories, setLiveCategories] = useState<FurnitureCategoryType[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
-  const [isLoadingPrice, setIsLoadingPrice] = useState(false); // For loading state during getEstimate
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -119,10 +128,10 @@ export default function FurnitureEstimatorPage() {
     setSelections(prev => ({ ...prev, sizeId }));
   }, []);
 
-  const handleGetEstimate = useCallback(async () => { // Made async
+  const handleGetEstimate = useCallback(async () => {
     if (!selections.categoryId || !selections.sizeId || !currentCategoryData || liveCategories.length === 0) return;
     
-    setIsLoadingPrice(true); // Start loading
+    setIsLoadingPrice(true);
 
     const allRequiredFeaturesSelected = (currentCategoryData.features || []).every(f => {
         const selection = selections.featureSelections[f.id];
@@ -135,22 +144,28 @@ export default function FurnitureEstimatorPage() {
     if (!allRequiredFeaturesSelected && (currentCategoryData.features || []).length > 0) {
         console.warn("Not all required features are selected.");
         setIsLoadingPrice(false); 
-        // Optionally, show a toast message to the user.
         return;
     }
     
-    // getEstimatedPrice is now async as it fetches from Firestore
     const priceEntry: PriceDataEntry | null = await getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId, liveCategories);
     const description = generateItemDescription(selections, liveCategories);
     
-    const estimationResult = {
+    const estimationResult: CurrentEstimationData = {
         priceRange: priceEntry?.priceRange || null, 
         description,
-        selections: { ...selections } 
+        selections: { ...selections },
+        overrideImageUrl: priceEntry?.overrideImageUrl, // Store override image details
+        overrideImageAiHint: priceEntry?.overrideImageAiHint,
     };
     setCurrentEstimationData(estimationResult);
-    addHistoryItem(estimationResult); 
-    setIsLoadingPrice(false); // Stop loading
+    // For history, we save the core estimation data, not necessarily the override image details 
+    // unless history items themselves need to store them. For simplicity, keeping history as is for now.
+    addHistoryItem({
+        priceRange: estimationResult.priceRange,
+        description: estimationResult.description,
+        selections: estimationResult.selections,
+    }); 
+    setIsLoadingPrice(false); 
     setStep('result');
   }, [selections, addHistoryItem, currentCategoryData, liveCategories]);
 
@@ -168,7 +183,14 @@ export default function FurnitureEstimatorPage() {
 
   const handleSaveEstimate = useCallback((name?: string) => {
     if (currentEstimationData) {
-      addSavedEstimate(currentEstimationData, name);
+      // When saving, we save the core data. If saved items later need to show override images,
+      // the EstimationRecord definition and rendering would need adjustment.
+      // For now, saved items will use derived images like history items.
+      addSavedEstimate({
+        selections: currentEstimationData.selections,
+        description: currentEstimationData.description,
+        priceRange: currentEstimationData.priceRange,
+      }, name);
     }
     setIsSaveDialogVisible(false);
   }, [currentEstimationData, addSavedEstimate]);
@@ -192,7 +214,7 @@ export default function FurnitureEstimatorPage() {
         );
     }
 
-    if (isLoadingPrice && (step === 'size' || step === 'features')) { // Show loader if price is being fetched
+    if (isLoadingPrice && (step === 'size' || step === 'features')) {
         return (
             <div className="flex flex-col items-center justify-center py-20">
                 <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -200,7 +222,6 @@ export default function FurnitureEstimatorPage() {
             </div>
         );
     }
-
 
     switch (step) {
       case 'category':
@@ -227,7 +248,7 @@ export default function FurnitureEstimatorPage() {
             sizes={currentCategoryData.sizes || []}
             currentSelection={selections.sizeId}
             onSizeSelect={handleSizeSelect}
-            onGetEstimate={handleGetEstimate} // This is now async internally due to getEstimatedPrice
+            onGetEstimate={handleGetEstimate}
             onBack={handleBackToFeatures}
             categoryName={currentCategoryData.name}
             categoryImageURL={currentCategoryData.imagePlaceholder}
@@ -235,7 +256,7 @@ export default function FurnitureEstimatorPage() {
           />
         );
       case 'result':
-        if (isLoadingPrice || !currentEstimationData) { // Check isLoadingPrice here too
+        if (isLoadingPrice || !currentEstimationData) {
              return (
                 <div className="flex flex-col items-center justify-center py-20">
                     <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
@@ -251,6 +272,8 @@ export default function FurnitureEstimatorPage() {
             onSave={handleOpenSaveDialog}
             currentSelections={currentEstimationData.selections}
             allCategories={liveCategories}
+            overrideImageUrl={currentEstimationData.overrideImageUrl} // Pass override image
+            overrideImageAiHint={currentEstimationData.overrideImageAiHint} // Pass override hint
           />
         );
       default:
@@ -281,5 +304,3 @@ export default function FurnitureEstimatorPage() {
     </div>
   );
 }
-
-    
