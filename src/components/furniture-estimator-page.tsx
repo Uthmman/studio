@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step } from '@/lib/definitions';
+import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, PriceDataEntry } from '@/lib/definitions'; // Added PriceDataEntry
 import { getEstimatedPrice, generateItemDescription, getFirebaseCategories, getFinalImageForSelections } from '@/lib/furniture-data';
 import CategorySelector from '@/components/furniture-estimator/category-selector';
 import FeatureSelector from '@/components/furniture-estimator/feature-selector';
@@ -30,6 +30,7 @@ export default function FurnitureEstimatorPage() {
 
   const [liveCategories, setLiveCategories] = useState<FurnitureCategoryType[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false); // For loading state during getEstimate
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -54,7 +55,7 @@ export default function FurnitureEstimatorPage() {
     });
     const category = liveCategories.find(c => c.id === categoryId);
     if (category) {
-      if (!category.features || category.features.length === 0) { // Check if features is undefined or empty
+      if (!category.features || category.features.length === 0) { 
         setStep('size'); 
       } else {
         setStep('features');
@@ -88,7 +89,6 @@ export default function FurnitureEstimatorPage() {
         } else { 
           newSelectionArray = newSelectionArray.filter(id => id !== optionId);
         }
-        // Store as array, even if empty, to distinguish from not-set or single-select string
         newFeatureSelections[featureId] = newSelectionArray; 
       } else { 
         newFeatureSelections[featureId] = optionId;
@@ -119,25 +119,28 @@ export default function FurnitureEstimatorPage() {
     setSelections(prev => ({ ...prev, sizeId }));
   }, []);
 
-  const handleGetEstimate = useCallback(() => {
+  const handleGetEstimate = useCallback(async () => { // Made async
     if (!selections.categoryId || !selections.sizeId || !currentCategoryData || liveCategories.length === 0) return;
+    
+    setIsLoadingPrice(true); // Start loading
 
     const allRequiredFeaturesSelected = (currentCategoryData.features || []).every(f => {
         const selection = selections.featureSelections[f.id];
         if (f.selectionType === 'multiple') {
-            return f.options.length === 0 || (Array.isArray(selection) && selection.length > 0);
+            return (f.options || []).length === 0 || (Array.isArray(selection) && selection.length > 0);
         }
-        return !!selection; // For single select, a selection must exist
+        return !!selection; 
     });
 
     if (!allRequiredFeaturesSelected && (currentCategoryData.features || []).length > 0) {
         console.warn("Not all required features are selected.");
+        setIsLoadingPrice(false); 
         // Optionally, show a toast message to the user.
         return;
     }
-    // Pass liveCategories to getEstimatedPrice
-    const priceEntry = getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId, liveCategories);
-    // Pass liveCategories to generateItemDescription
+    
+    // getEstimatedPrice is now async as it fetches from Firestore
+    const priceEntry: PriceDataEntry | null = await getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId, liveCategories);
     const description = generateItemDescription(selections, liveCategories);
     
     const estimationResult = {
@@ -147,6 +150,7 @@ export default function FurnitureEstimatorPage() {
     };
     setCurrentEstimationData(estimationResult);
     addHistoryItem(estimationResult); 
+    setIsLoadingPrice(false); // Stop loading
     setStep('result');
   }, [selections, addHistoryItem, currentCategoryData, liveCategories]);
 
@@ -188,6 +192,15 @@ export default function FurnitureEstimatorPage() {
         );
     }
 
+    if (isLoadingPrice && (step === 'size' || step === 'features')) { // Show loader if price is being fetched
+        return (
+            <div className="flex flex-col items-center justify-center py-20">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Getting price estimate...</p>
+            </div>
+        );
+    }
+
 
     switch (step) {
       case 'category':
@@ -214,7 +227,7 @@ export default function FurnitureEstimatorPage() {
             sizes={currentCategoryData.sizes || []}
             currentSelection={selections.sizeId}
             onSizeSelect={handleSizeSelect}
-            onGetEstimate={handleGetEstimate}
+            onGetEstimate={handleGetEstimate} // This is now async internally due to getEstimatedPrice
             onBack={handleBackToFeatures}
             categoryName={currentCategoryData.name}
             categoryImageURL={currentCategoryData.imagePlaceholder}
@@ -222,7 +235,14 @@ export default function FurnitureEstimatorPage() {
           />
         );
       case 'result':
-        if (!currentEstimationData) return <p>Loading results...</p>;
+        if (isLoadingPrice || !currentEstimationData) { // Check isLoadingPrice here too
+             return (
+                <div className="flex flex-col items-center justify-center py-20">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+                    <p className="text-muted-foreground">Loading results...</p>
+                </div>
+            );
+        }
         return (
           <PriceDisplay
             priceRange={currentEstimationData.priceRange}
@@ -230,7 +250,7 @@ export default function FurnitureEstimatorPage() {
             onStartOver={handleStartOver}
             onSave={handleOpenSaveDialog}
             currentSelections={currentEstimationData.selections}
-            allCategories={liveCategories} // Pass liveCategories
+            allCategories={liveCategories}
           />
         );
       default:
@@ -261,3 +281,5 @@ export default function FurnitureEstimatorPage() {
     </div>
   );
 }
+
+    

@@ -1,20 +1,42 @@
 
-import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig, UserSelections, DisplayablePriceEntry } from '@/lib/definitions';
+import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig, UserSelections, DisplayablePriceEntry, PriceRange } from '@/lib/definitions';
 import { generateId } from '@/lib/utils';
 import { db } from '@/lib/firebase'; // Import Firestore instance
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
 // --- Firestore Collection References ---
 const CATEGORIES_COLLECTION = 'categories';
-// const PRICES_COLLECTION = 'prices'; // Will be used later
+const PRICES_COLLECTION = 'prices';
 
 // Helper to convert array of option IDs to a canonical string form (sorted, comma-separated)
 // and to handle single string values consistently.
 export const getCanonicalFeatureValue = (value: string | string[] | undefined): string => {
   if (Array.isArray(value)) {
-    return value.sort().join(',');
+    if (value.length === 0) return ''; // Handle empty array explicitly
+    return value.slice().sort().join(','); // Use slice() to avoid mutating original array before sort
   }
   return value || ''; // Return empty string if undefined or already a string (could be empty)
+};
+
+// New helper function to generate a deterministic document ID for price entries
+const generatePriceDocumentId = (
+  categoryId: string,
+  featureSelections: Record<string, string | string[]>,
+  sizeId: string
+): string => {
+  const canonicalFeatures: string[] = [];
+  Object.keys(featureSelections)
+    .sort() // Sort keys for consistent order
+    .forEach(featureId => {
+      const canonicalValue = getCanonicalFeatureValue(featureSelections[featureId]);
+      if (canonicalValue) { // Only include features that have a selection
+        canonicalFeatures.push(`${featureId}=${canonicalValue}`);
+      }
+    });
+  const featuresString = canonicalFeatures.join(';');
+  // Replace characters not suitable for Firestore IDs if necessary, but Firestore is quite flexible.
+  // Using underscores and hyphens should be safe.
+  return `${categoryId}_${featuresString}_${sizeId}`.replace(/[^a-zA-Z0-9_.;=-]/g, '-');
 };
 
 
@@ -30,13 +52,13 @@ export const getFirebaseCategories = async (): Promise<FurnitureCategory[]> => {
     return categoriesList;
   } catch (error) {
     console.error("Error fetching categories from Firestore:", error);
-    return []; // Return empty array on error
+    return [];
   }
 };
 
 export const addFirebaseCategory = async (categoryData: Omit<FurnitureCategory, 'id'>): Promise<FurnitureCategory | null> => {
   try {
-    const newId = categoryData.name.toLowerCase().replace(/\s+/g, '-') + '-' + generateId('fbcat'); // Make ID more readable
+    const newId = categoryData.name.toLowerCase().replace(/\s+/g, '-') + '-' + generateId('fbcat');
     const newCategory: FurnitureCategory = {
       ...categoryData,
       id: newId,
@@ -64,8 +86,9 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
   try {
     const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId);
     await deleteDoc(categoryRef);
-    // Local PRICE_DATA cleanup (still relevant as long as PRICE_DATA is local)
-    PRICE_DATA = PRICE_DATA.filter(p => p.categoryId !== categoryId);
+    // Note: Deleting associated price data from Firestore would require more complex logic
+    // (querying for all price documents with this categoryId and deleting them).
+    // This is not implemented here for simplicity in this step.
     return true;
   } catch (error) {
     console.error("Error deleting category from Firestore:", error);
@@ -74,10 +97,8 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
 };
 
 
-// == Local In-Memory Data (PRICE_DATA is still local) ==
-// FURNITURE_CATEGORIES is now primarily a fallback or for initial seeding ideas.
+// == Local In-Memory Data (FURNITURE_CATEGORIES is now primarily a fallback or for initial seeding ideas) ==
 // The estimator and admin panel will fetch categories from Firestore.
-
 export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
   {
     id: 'sofas',
@@ -126,68 +147,46 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
   // ... other default categories (can be removed if Firestore is source of truth and seeded)
 ];
 
+// PRICE_DATA is now managed in Firestore. This array is no longer the source of truth.
+// It's kept here for reference or potential one-time seeding scripts.
+/*
 export let PRICE_DATA: PriceDataEntry[] = [
-  // Sofas
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-small', priceRange: { min: 300, max: 700 } },
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 700, max: 1600 } },
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-sectional', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-traditional' }, sizeId: 'sofas-size-large', priceRange: { min: 1500, max: 3500 } },
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-velvet', 'sofas-feat-style': 'sofas-feat-style-opt-midcentury' }, sizeId: 'sofas-size-small', priceRange: { min: 500, max: 1000 } },
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-3', 'sofas-feat-material': 'sofas-feat-material-opt-leather', 'sofas-feat-style': 'sofas-feat-style-opt-modern' }, sizeId: 'sofas-size-medium', priceRange: { min: 1200, max: 2500 } },
-  { categoryId: 'sofas', featureSelections: { 'sofas-feat-seats': 'sofas-feat-seats-opt-2', 'sofas-feat-material': 'sofas-feat-material-opt-fabric', 'sofas-feat-style': getCanonicalFeatureValue(['sofas-feat-style-opt-midcentury', 'sofas-feat-style-opt-modern']) }, sizeId: 'sofas-size-small', priceRange: { min: 600, max: 1100 } },
-  
-  // Dining Tables
-  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-rect', 'tables-feat-material': 'tables-feat-material-opt-wood' }, sizeId: 'tables-size-4-6', priceRange: { min: 350, max: 850 } },
-  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-round', 'tables-feat-material': 'tables-feat-material-opt-glass' }, sizeId: 'tables-size-2-4', priceRange: { min: 200, max: 600 } },
-  { categoryId: 'tables', featureSelections: { 'tables-feat-shape': 'tables-feat-shape-opt-square', 'tables-feat-material': 'tables-feat-material-opt-metal' }, sizeId: 'tables-size-6-8', priceRange: { min: 500, max: 1200 } },
-
-  // Beds
-  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-wood', 'beds-feat-headboard': 'beds-feat-headboard-opt-yes' }, sizeId: 'beds-size-queen', priceRange: { min: 400, max: 1000 } },
-  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-metal', 'beds-feat-headboard': 'beds-feat-headboard-opt-no' }, sizeId: 'beds-size-king', priceRange: { min: 300, max: 800 } },
-  { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-upholstered', 'beds-feat-headboard': 'beds-feat-headboard-opt-yes' }, sizeId: 'beds-size-full', priceRange: { min: 500, max: 1200 } },
+  // ... (old price data commented out)
 ];
+*/
 
 // == Pricing and Description Logic ==
 
-// getEstimatedPrice still uses local PRICE_DATA.
-// It also needs access to the category definition to know about its features.
-// If categories are fetched async, this function needs the specific category data.
-export function getEstimatedPrice(
+// getEstimatedPrice now fetches from Firestore.
+export async function getEstimatedPrice(
   categoryId: string | null,
   featureSelectionsFromUser: Record<string, string | string[]>,
   sizeId: string | null,
-  availableCategories: FurnitureCategory[] // Pass the currently available categories
-): PriceDataEntry | null {
+  _availableCategories: FurnitureCategory[] // _availableCategories might not be strictly needed if IDs are globally unique and structure is known
+): Promise<PriceDataEntry | null> {
   if (!categoryId || !sizeId) return null;
 
-  const category = availableCategories.find(c => c.id === categoryId);
-  if (!category) {
-    console.warn(`Category with id ${categoryId} not found in provided categories for price estimation.`);
-    return null; // Category definition needed to correctly interpret featureSelections
+  const priceDocId = generatePriceDocumentId(categoryId, featureSelectionsFromUser, sizeId);
+  
+  try {
+    const priceDocRef = doc(db, PRICES_COLLECTION, priceDocId);
+    const priceDocSnap = await getDoc(priceDocRef);
+
+    if (priceDocSnap.exists()) {
+      const priceRange = priceDocSnap.data() as PriceRange;
+      return {
+        categoryId,
+        featureSelections: featureSelectionsFromUser, // Return the user's selections for context
+        sizeId,
+        priceRange,
+      };
+    } else {
+      return null; // No price found for this specific combination
+    }
+  } catch (error) {
+    console.error("Error fetching price from Firestore:", error);
+    return null;
   }
-
-  const entry = PRICE_DATA.find(item => {
-    if (item.categoryId !== categoryId || item.sizeId !== sizeId) {
-      return false;
-    }
-    // If category has no features, an empty featureSelections object should match
-    if (category.features.length === 0) {
-      return Object.keys(item.featureSelections).length === 0 && Object.keys(featureSelectionsFromUser).length === 0;
-    }
-    return category.features.every(featureConfig => {
-      const userSelectionForFeature = featureSelectionsFromUser[featureConfig.id];
-      const priceDataSelectionForFeature = item.featureSelections[featureConfig.id];
-
-      // If a feature is defined in the category but not selected by user and not in price data, it's a match for that feature.
-      // Or if a feature is defined, selected by user, and present in price data, then values must match.
-      const canonicalUserValue = getCanonicalFeatureValue(userSelectionForFeature);
-      const canonicalPriceDataValue = getCanonicalFeatureValue(priceDataSelectionForFeature);
-
-      if (canonicalUserValue === '' && canonicalPriceDataValue === '') return true; // Both are considered "not set" for this feature
-
-      return canonicalUserValue === canonicalPriceDataValue;
-    });
-  });
-  return entry || null;
 }
 
 export function generateItemDescription(
@@ -202,31 +201,34 @@ export function generateItemDescription(
   let description = category.name;
   const featureParts: string[] = [];
 
-  for (const featureConfig of category.features) {
+  // Ensure features array exists before iterating
+  (category.features || []).forEach(featureConfig => {
     const selectedValue = selections.featureSelections[featureConfig.id];
     if (selectedValue) {
+      const optionsToSearch = featureConfig.options || [];
       if (Array.isArray(selectedValue)) {
         const optionLabels = selectedValue.map(optId => {
-          const option = featureConfig.options.find(o => o.id === optId);
+          const option = optionsToSearch.find(o => o.id === optId);
           return option ? option.label : '';
         }).filter(label => label);
         if (optionLabels.length > 0) {
           featureParts.push(`${featureConfig.name}: ${optionLabels.join(' & ')}`);
         }
       } else {
-        const option = featureConfig.options.find(o => o.id === selectedValue);
+        const option = optionsToSearch.find(o => o.id === selectedValue);
         if (option) {
           featureParts.push(`${featureConfig.name}: ${option.label}`);
         }
       }
     }
-  }
+  });
   if (featureParts.length > 0) {
     description += ` (${featureParts.join(', ')})`;
   }
 
   if (selections.sizeId) {
-    const size = category.sizes.find(s => s.id === selections.sizeId);
+    const sizesToSearch = category.sizes || [];
+    const size = sizesToSearch.find(s => s.id === selections.sizeId);
     if (size) {
       description += `, Size: ${size.label}`;
     }
@@ -236,7 +238,7 @@ export function generateItemDescription(
 
 export function getFinalImageForSelections(
   selections: UserSelections,
-  allCategoriesData: FurnitureCategory[] // Now expects categories data
+  allCategoriesData: FurnitureCategory[]
 ): { finalImageUrl: string | null; finalImageAiHint: string | null } {
   if (!selections.categoryId) return { finalImageUrl: null, finalImageAiHint: null };
 
@@ -249,26 +251,24 @@ export function getFinalImageForSelections(
   let finalImageUrl = category.imagePlaceholder || defaultImage;
   let finalImageAiHint = category.imageAiHint || category.name.toLowerCase() || defaultHint;
   
-  // Prioritize size image if available
   if (selections.sizeId) {
-    const sizeConfig = category.sizes.find(s => s.id === selections.sizeId);
+    const sizeConfig = (category.sizes || []).find(s => s.id === selections.sizeId);
     if (sizeConfig?.imagePlaceholder) {
       finalImageUrl = sizeConfig.imagePlaceholder;
       finalImageAiHint = sizeConfig.imageAiHint || sizeConfig.label.toLowerCase();
     }
   }
   
-  // Then, override with feature image if a more specific one is available from the *first* selected feature option that has an image
-  for (const feature of category.features) {
+  for (const feature of (category.features || [])) {
     const selectedValue = selections.featureSelections[feature.id];
     if (selectedValue) {
       const firstSelectedOptionId = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
-      if (firstSelectedOptionId) { // Ensure there's at least one selection
-        const option = feature.options.find(opt => opt.id === firstSelectedOptionId);
+      if (firstSelectedOptionId) {
+        const option = (feature.options || []).find(opt => opt.id === firstSelectedOptionId);
         if (option?.imagePlaceholder) {
           finalImageUrl = option.imagePlaceholder;
           finalImageAiHint = option.imageAiHint || option.label.toLowerCase();
-          break; // Use the first feature option image found
+          break; 
         }
       }
     }
@@ -277,57 +277,49 @@ export function getFinalImageForSelections(
 }
 
 function getPowerSet<T>(array: T[]): T[][] {
-    const result: T[][] = [[]]; // Include empty set for combinations where a multi-select feature might not be chosen
+    const result: T[][] = [[]]; 
     for (const value of array) {
         const length = result.length;
         for (let i = 0; i < length; i++) {
             result.push(result[i].concat(value));
         }
     }
-    // Return all subsets, including empty for "none selected" and single/multiple items
-    // The filter for subset.length > 0 was removed to allow "no option selected" for a multi-feature
     return result;
 }
 
-//getAllPossibleCombinationsWithPrices now takes categories from Firestore
-export function getAllPossibleCombinationsWithPrices(
+export async function getAllPossibleCombinationsWithPrices(
   categoriesFromFirestore: FurnitureCategory[]
-): DisplayablePriceEntry[] {
+): Promise<DisplayablePriceEntry[]> {
   const allCombinations: DisplayablePriceEntry[] = [];
 
-  categoriesFromFirestore.forEach(category => {
+  for (const category of categoriesFromFirestore) {
     const generateFeaturePermutations = (
       featureIndex: number,
-      currentSelections: Record<string, string | string[]> // string[] for multi-select
+      currentSelections: Record<string, string | string[]>
     ): Record<string, string | string[]>[] => {
-      if (featureIndex >= category.features.length) {
+      if (featureIndex >= (category.features || []).length) {
         return [currentSelections];
       }
-      const feature = category.features[featureIndex];
+      const feature = (category.features || [])[featureIndex];
       let permutations: Record<string, string | string[]>[] = [];
 
-      if (feature.options.length === 0) { // No options for this feature
+      if ((feature.options || []).length === 0) {
         return generateFeaturePermutations(featureIndex + 1, currentSelections);
       }
 
       if (feature.selectionType === 'multiple') {
-        const optionSubsets = getPowerSet(feature.options.map(opt => opt.id));
-         // For multi-select, an "empty" selection (no options picked for THIS feature) is valid.
-        // So, we iterate through all subsets, including the empty one.
+        const optionSubsets = getPowerSet((feature.options || []).map(opt => opt.id));
         optionSubsets.forEach(subset => {
             const nextSelections = {
                 ...currentSelections,
-                ...(subset.length > 0 && { [feature.id]: subset.sort() }) // Store as array, or omit if empty
+                ...(subset.length > 0 && { [feature.id]: subset.sort() }) 
             };
             permutations = permutations.concat(
                 generateFeaturePermutations(featureIndex + 1, nextSelections)
             );
         });
-
-      } else { // Single select
-        // Also include a "not selected" path for single-select if desired for price table (e.g. feature not mandatory)
-        // For now, assume single-select features must have one option chosen for a "complete" combination.
-        feature.options.forEach(option => {
+      } else { 
+        (feature.options || []).forEach(option => {
           const nextSelections = {
             ...currentSelections,
             [feature.id]: option.id,
@@ -340,41 +332,39 @@ export function getAllPossibleCombinationsWithPrices(
       return permutations;
     };
 
-    const featurePermutations: Record<string, string | string[]>[] = category.features.length > 0
+    const featurePermutations: Record<string, string | string[]>[] = (category.features || []).length > 0
       ? generateFeaturePermutations(0, {})
-      : [{}]; // If no features, just one empty permutation
+      : [{}];
 
-    if (category.sizes.length === 0 && category.features.length > 0) return; // Skip if features exist but no sizes
+    if ((category.sizes || []).length === 0 && (category.features || []).length > 0) continue; 
 
-    const sizesToIterate = category.sizes.length > 0 ? category.sizes : [{id: 'default-size', label:'Standard'} as FurnitureSizeConfig];
+    const sizesToIterate = (category.sizes || []).length > 0 ? category.sizes : [{id: 'default-size', label:'Standard'} as FurnitureSizeConfig];
 
-
-    sizesToIterate.forEach(size => {
-      featurePermutations.forEach(currentFeatureSelections => {
+    for (const size of sizesToIterate) {
+      for (const currentFeatureSelections of featurePermutations) {
         const userSelections: UserSelections = {
           categoryId: category.id,
-          featureSelections: currentFeatureSelections, // Already in correct format {featId: optId or optId[]}
+          featureSelections: currentFeatureSelections,
           sizeId: size.id,
         };
-        // Pass categoriesFromFirestore to generateItemDescription
-        const fullDescription = generateItemDescription(userSelections, categoriesFromFirestore);
         
-        // getEstimatedPrice still uses local PRICE_DATA but needs categoriesFromFirestore for context
-        const existingPriceEntry = getEstimatedPrice(category.id, currentFeatureSelections, size.id, categoriesFromFirestore);
+        const fullDescription = generateItemDescription(userSelections, categoriesFromFirestore);
+        // getEstimatedPrice is now async
+        const existingPriceEntry = await getEstimatedPrice(category.id, currentFeatureSelections, size.id, categoriesFromFirestore);
         
         const featureParts: string[] = [];
-        category.features.forEach(fConf => {
+        (category.features || []).forEach(fConf => {
           const selectedValue = currentFeatureSelections[fConf.id];
           if (selectedValue) {
             const selectedOptionLabels = (Array.isArray(selectedValue) ? selectedValue : [selectedValue])
-              .map(optId => fConf.options.find(o => o.id === optId)?.label)
+              .map(optId => (fConf.options || []).find(o => o.id === optId)?.label)
               .filter(Boolean) as string[];
             if (selectedOptionLabels.length > 0) {
               featureParts.push(`${fConf.name}: ${selectedOptionLabels.join(' & ')}`);
             }
           }
         });
-        const featureDescription = featureParts.join(', ') || (category.features.length > 0 ? 'Base Model' : 'N/A');
+        const featureDescription = featureParts.join(', ') || ((category.features || []).length > 0 ? 'Base Model' : 'N/A');
         
         allCombinations.push({
           categoryId: category.id,
@@ -387,64 +377,35 @@ export function getAllPossibleCombinationsWithPrices(
           description: fullDescription,
           isPriced: !!existingPriceEntry,
         });
-      });
-    });
-  });
+      }
+    }
+  }
   return allCombinations;
 }
 
-// updateOrAddPriceData still modifies local PRICE_DATA.
-// It needs categoriesFromFirestore to correctly interpret feature selections for canonicalization.
-export const updateOrAddPriceData = (entry: PriceDataEntry, categoriesFromFirestore: FurnitureCategory[]): PriceDataEntry | null => {
-  const category = categoriesFromFirestore.find(c => c.id === entry.categoryId);
-  if (!category) {
-      console.error("Category not found for price update:", entry.categoryId);
-      return null;
-  }
 
+// updateOrAddPriceData now writes to Firestore.
+export async function updateOrAddPriceData(
+  entry: PriceDataEntry,
+  _categoriesFromFirestore: FurnitureCategory[] // _categoriesFromFirestore might not be needed if IDs are globally unique
+): Promise<PriceDataEntry | null> {
   if (entry.priceRange.min < 0 || entry.priceRange.max < 0 || entry.priceRange.min > entry.priceRange.max) {
     console.error("Invalid price range for update/add:", entry.priceRange);
     return null;
   }
   
-  // Canonicalize selections based on the actual category definition
-  const canonicalEntrySelections: Record<string, string> = {};
-  category.features.forEach(featConf => {
-      const val = entry.featureSelections[featConf.id];
-      if (val !== undefined) { // Only include features that were actually part of the entry
-          canonicalEntrySelections[featConf.id] = getCanonicalFeatureValue(val);
-      }
-  });
+  const priceDocId = generatePriceDocumentId(entry.categoryId, entry.featureSelections, entry.sizeId);
 
-  const index = PRICE_DATA.findIndex(p => {
-    if (p.categoryId !== entry.categoryId || p.sizeId !== entry.sizeId) return false;
-    
-    const pCategory = categoriesFromFirestore.find(c => c.id === p.categoryId);
-    if(!pCategory) return false; // Should not happen if data is consistent
-
-    const pCanonicalSelections: Record<string, string> = {};
-    pCategory.features.forEach(featConf => {
-        const val = p.featureSelections[featConf.id];
-         if (val !== undefined) { // Only include features that were part of stored price data
-            pCanonicalSelections[featConf.id] = getCanonicalFeatureValue(val);
-        }
-    });
-
-    // Check if all keys in canonicalEntrySelections are in pCanonicalSelections and vice-versa, and values match
-    const entryKeys = Object.keys(canonicalEntrySelections);
-    const pKeys = Object.keys(pCanonicalSelections);
-
-    if (entryKeys.length !== pKeys.length) return false;
-    return entryKeys.every(featId => canonicalEntrySelections[featId] === pCanonicalSelections[featId]);
-  });
-
-  const entryToSave = { ...entry, featureSelections: canonicalEntrySelections };
-
-  if (index !== -1) {
-    PRICE_DATA[index] = entryToSave;
-    return PRICE_DATA[index];
-  } else {
-    PRICE_DATA.push(entryToSave);
-    return entryToSave;
+  try {
+    const priceDocRef = doc(db, PRICES_COLLECTION, priceDocId);
+    // Only store the priceRange object in Firestore document.
+    // The ID itself contains all the selection criteria.
+    await setDoc(priceDocRef, entry.priceRange); 
+    return entry; // Return the original entry to confirm what was intended to be saved.
+  } catch (error) {
+    console.error("Error saving price to Firestore:", error);
+    return null;
   }
-};
+}
+
+    
