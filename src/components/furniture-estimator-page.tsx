@@ -1,9 +1,9 @@
 
 "use client";
 
-import { useState, useMemo, useCallback } from 'react';
-import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step, FurnitureFeatureConfig } from '@/lib/definitions';
-import { FURNITURE_CATEGORIES, getEstimatedPrice, generateItemDescription } from '@/lib/furniture-data';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import type { UserSelections, PriceRange, FurnitureCategory as FurnitureCategoryType, Step } from '@/lib/definitions';
+import { getEstimatedPrice, generateItemDescription, getFirebaseCategories, getFinalImageForSelections } from '@/lib/furniture-data';
 import CategorySelector from '@/components/furniture-estimator/category-selector';
 import FeatureSelector from '@/components/furniture-estimator/feature-selector';
 import SizeSelector from '@/components/furniture-estimator/size-selector';
@@ -12,7 +12,7 @@ import StepIndicator from '@/components/furniture-estimator/step-indicator';
 import Header from '@/components/layout/header'; 
 import { useEstimationStorage } from '@/hooks/use-estimation-storage';
 import SaveEstimationDialog from '@/components/history/save-estimation-dialog';
-
+import { Loader2 } from 'lucide-react';
 
 const initialSelections: UserSelections = {
   categoryId: null,
@@ -28,27 +28,39 @@ export default function FurnitureEstimatorPage() {
   const { addHistoryItem, addSavedEstimate } = useEstimationStorage();
   const [isSaveDialogVisible, setIsSaveDialogVisible] = useState(false);
 
+  const [liveCategories, setLiveCategories] = useState<FurnitureCategoryType[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      const fetchedCategories = await getFirebaseCategories();
+      setLiveCategories(fetchedCategories);
+      setIsLoadingCategories(false);
+    };
+    fetchCategories();
+  }, []);
 
   const currentCategoryData = useMemo(() => {
-    if (!selections.categoryId) return null;
-    return FURNITURE_CATEGORIES.find(c => c.id === selections.categoryId) || null;
-  }, [selections.categoryId]);
+    if (!selections.categoryId || liveCategories.length === 0) return null;
+    return liveCategories.find(c => c.id === selections.categoryId) || null;
+  }, [selections.categoryId, liveCategories]);
 
   const handleCategorySelect = useCallback((categoryId: string) => {
-    setSelections({ // Reset selections when category changes
+    setSelections({ 
       categoryId,
       featureSelections: {}, 
       sizeId: null,          
     });
-    const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
+    const category = liveCategories.find(c => c.id === categoryId);
     if (category) {
-      if (category.features.length === 0) {
+      if (!category.features || category.features.length === 0) { // Check if features is undefined or empty
         setStep('size'); 
       } else {
         setStep('features');
       }
     }
-  }, []);
+  }, [liveCategories]);
 
   const handleFeatureSelect = useCallback((featureId: string, optionId: string, isSelected?: boolean) => {
     const featureConfig = currentCategoryData?.features.find(f => f.id === featureId);
@@ -63,22 +75,22 @@ export default function FurnitureEstimatorPage() {
         if (Array.isArray(currentSelectionForFeature)) {
           newSelectionArray = [...currentSelectionForFeature];
         } else if (typeof currentSelectionForFeature === 'string' && currentSelectionForFeature) {
-          // This case should ideally not happen if UI is correct, but handle defensively
           newSelectionArray = [currentSelectionForFeature]; 
         }
         else {
           newSelectionArray = [];
         }
 
-        if (isSelected) { // Checkbox checked
+        if (isSelected) { 
           if (!newSelectionArray.includes(optionId)) {
             newSelectionArray.push(optionId);
           }
-        } else { // Checkbox unchecked
+        } else { 
           newSelectionArray = newSelectionArray.filter(id => id !== optionId);
         }
-        newFeatureSelections[featureId] = newSelectionArray.length > 0 ? newSelectionArray : []; // Store empty array if all unselected
-      } else { // Single select (Radio)
+        // Store as array, even if empty, to distinguish from not-set or single-select string
+        newFeatureSelections[featureId] = newSelectionArray; 
+      } else { 
         newFeatureSelections[featureId] = optionId;
       }
       return { ...prev, featureSelections: newFeatureSelections };
@@ -96,7 +108,7 @@ export default function FurnitureEstimatorPage() {
 
   const handleBackToFeatures = useCallback(() => {
      setSelections(prev => ({...prev, sizeId: null})); 
-     if (currentCategoryData?.features.length === 0) { // If no features, go back to category
+     if (!currentCategoryData?.features || currentCategoryData.features.length === 0) {
         handleBackToCategory();
      } else {
         setStep('features');
@@ -108,26 +120,25 @@ export default function FurnitureEstimatorPage() {
   }, []);
 
   const handleGetEstimate = useCallback(() => {
-    if (!selections.categoryId || !selections.sizeId || !currentCategoryData) return;
+    if (!selections.categoryId || !selections.sizeId || !currentCategoryData || liveCategories.length === 0) return;
 
-    // Ensure all features that require selection have one.
-    // This check might be redundant if "Next" button in FeatureSelector already validates.
-    const allRequiredFeaturesSelected = currentCategoryData.features.every(f => {
+    const allRequiredFeaturesSelected = (currentCategoryData.features || []).every(f => {
         const selection = selections.featureSelections[f.id];
         if (f.selectionType === 'multiple') {
             return f.options.length === 0 || (Array.isArray(selection) && selection.length > 0);
         }
-        return !!selection;
+        return !!selection; // For single select, a selection must exist
     });
 
-    if (!allRequiredFeaturesSelected && currentCategoryData.features.length > 0) {
-        // Optionally show a toast or message here if needed, though UI should prevent this.
+    if (!allRequiredFeaturesSelected && (currentCategoryData.features || []).length > 0) {
         console.warn("Not all required features are selected.");
+        // Optionally, show a toast message to the user.
         return;
     }
-
-    const priceEntry = getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId);
-    const description = generateItemDescription(selections, FURNITURE_CATEGORIES);
+    // Pass liveCategories to getEstimatedPrice
+    const priceEntry = getEstimatedPrice(selections.categoryId, selections.featureSelections, selections.sizeId, liveCategories);
+    // Pass liveCategories to generateItemDescription
+    const description = generateItemDescription(selections, liveCategories);
     
     const estimationResult = {
         priceRange: priceEntry?.priceRange || null, 
@@ -137,7 +148,7 @@ export default function FurnitureEstimatorPage() {
     setCurrentEstimationData(estimationResult);
     addHistoryItem(estimationResult); 
     setStep('result');
-  }, [selections, addHistoryItem, currentCategoryData]);
+  }, [selections, addHistoryItem, currentCategoryData, liveCategories]);
 
   const handleStartOver = useCallback(() => {
     setSelections(initialSelections);
@@ -160,15 +171,32 @@ export default function FurnitureEstimatorPage() {
 
 
   const renderStepContent = () => {
+    if (isLoadingCategories && step === 'category') {
+      return (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-muted-foreground">Loading categories from Firestore...</p>
+        </div>
+      );
+    }
+    if (liveCategories.length === 0 && step === 'category' && !isLoadingCategories) {
+        return (
+            <div className="text-center py-10">
+                <p className="text-xl text-muted-foreground">No furniture categories found in Firestore.</p>
+                <p className="text-sm text-muted-foreground mt-2">Please add categories in the admin panel.</p>
+            </div>
+        );
+    }
+
+
     switch (step) {
       case 'category':
-        return <CategorySelector categories={FURNITURE_CATEGORIES} onSelectCategory={handleCategorySelect} />;
+        return <CategorySelector categories={liveCategories} onSelectCategory={handleCategorySelect} />;
       case 'features':
-        if (!currentCategoryData) return <p>Error: Category not found.</p>;
-        // Pass allCategories if FeatureSelector needs it, otherwise it can be removed from props there.
+        if (!currentCategoryData) return <p>Error: Category data not loaded or not found.</p>;
         return (
           <FeatureSelector
-            features={currentCategoryData.features}
+            features={currentCategoryData.features || []}
             currentSelections={selections.featureSelections}
             onFeatureSelect={handleFeatureSelect}
             onNext={handleProceedToSize}
@@ -176,18 +204,18 @@ export default function FurnitureEstimatorPage() {
             categoryName={currentCategoryData.name}
             categoryImageURL={currentCategoryData.imagePlaceholder}
             categoryImageAiHint={currentCategoryData.imageAiHint}
-            allCategories={FURNITURE_CATEGORIES} 
+            allCategories={liveCategories} 
           />
         );
       case 'size':
-        if (!currentCategoryData) return <p>Error: Category not found.</p>;
+        if (!currentCategoryData) return <p>Error: Category data not loaded or not found.</p>;
         return (
           <SizeSelector
-            sizes={currentCategoryData.sizes}
+            sizes={currentCategoryData.sizes || []}
             currentSelection={selections.sizeId}
             onSizeSelect={handleSizeSelect}
             onGetEstimate={handleGetEstimate}
-            onBack={handleBackToFeatures} // Always go back to features or category via handleBackToFeatures
+            onBack={handleBackToFeatures}
             categoryName={currentCategoryData.name}
             categoryImageURL={currentCategoryData.imagePlaceholder}
             categoryImageAiHint={currentCategoryData.imageAiHint}
@@ -202,7 +230,7 @@ export default function FurnitureEstimatorPage() {
             onStartOver={handleStartOver}
             onSave={handleOpenSaveDialog}
             currentSelections={currentEstimationData.selections}
-            allCategories={FURNITURE_CATEGORIES}
+            allCategories={liveCategories} // Pass liveCategories
           />
         );
       default:
@@ -233,4 +261,3 @@ export default function FurnitureEstimatorPage() {
     </div>
   );
 }
-

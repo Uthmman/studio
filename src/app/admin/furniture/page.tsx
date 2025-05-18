@@ -4,11 +4,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { FurnitureCategory, PriceDataEntry, DisplayablePriceEntry } from '@/lib/definitions';
 import {
-  FURNITURE_CATEGORIES as initialLocalCategoriesData, // Keep for reference or until full migration
-  PRICE_DATA as initialPriceData, // Keep for price data table for now
-  getAllPossibleCombinationsWithPrices, // Keep for price data table for now
-  updateOrAddPriceData, // Keep for price data table for now
-  // Firestore functions for categories
+  getAllPossibleCombinationsWithPrices, 
+  updateOrAddPriceData, 
   getFirebaseCategories,
   addFirebaseCategory,
   updateFirebaseCategory,
@@ -48,8 +45,13 @@ export default function AdminFurniturePage() {
     setCategories(fetchedCategories);
     setIsLoadingCategories(false);
 
-    // Price combinations still use local data for now
-    setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices())));
+    // Pass fetchedCategories to generate combinations for the price table
+    // Note: Price data itself is still local.
+    if (fetchedCategories.length > 0) {
+        setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices(fetchedCategories))));
+    } else {
+        setPriceCombinations([]); // No categories, no combinations
+    }
   }, []);
 
   useEffect(() => {
@@ -85,34 +87,30 @@ export default function AdminFurniturePage() {
 
   const handleCategoryFormSubmit = useCallback(async (categoryDataFromForm: FurnitureCategory) => {
     let success: FurnitureCategory | null = null;
-    // The ID is now part of categoryDataFromForm if it's an edit, or generated if new by the dialog
-    const { id, ...dataToSave } = categoryDataFromForm;
+    const { id, ...dataToSave } = categoryDataFromForm; // id might be new or existing
 
-    if (editingCategory) { // Editing existing category
-      const categoryToUpdate: FurnitureCategory = {
-        id: editingCategory.id, // ensure original id is used
+    if (editingCategory && editingCategory.id) { // Editing existing category
+       const categoryToUpdate: FurnitureCategory = {
+        id: editingCategory.id, 
         name: categoryDataFromForm.name,
         iconName: categoryDataFromForm.iconName,
         imagePlaceholder: categoryDataFromForm.imagePlaceholder,
         imageAiHint: categoryDataFromForm.imageAiHint,
-        features: categoryDataFromForm.features, // these are already structured
-        sizes: categoryDataFromForm.sizes,       // these are already structured
+        features: categoryDataFromForm.features || [],
+        sizes: categoryDataFromForm.sizes || [],
       };
       success = await updateFirebaseCategory(categoryToUpdate);
       if (success) {
         toast({ title: "Category Updated", description: `Category "${success.name}" has been updated in Firestore.` });
       }
     } else { // Adding new category
-      // The CategoryFormDialog should ideally not generate the ID if Firestore is the source of truth.
-      // For now, we assume the ID might be on categoryDataFromForm or it's new.
-      // addFirebaseCategory expects Omit<FurnitureCategory, 'id'>.
       const newCategoryData: Omit<FurnitureCategory, 'id'> = {
         name: categoryDataFromForm.name,
         iconName: categoryDataFromForm.iconName,
         imagePlaceholder: categoryDataFromForm.imagePlaceholder,
         imageAiHint: categoryDataFromForm.imageAiHint,
-        features: categoryDataFromForm.features,
-        sizes: categoryDataFromForm.sizes,
+        features: categoryDataFromForm.features || [],
+        sizes: categoryDataFromForm.sizes || [],
       };
       success = await addFirebaseCategory(newCategoryData);
       
@@ -130,16 +128,23 @@ export default function AdminFurniturePage() {
     setEditingCategory(null);
   }, [editingCategory, toast, refreshAdminData]);
 
-  // Price saving logic remains the same, using local data for now
+  // Price saving logic still uses local data via updateOrAddPriceData.
+  // It now needs the current list of categories (from Firestore) to correctly interpret feature selections.
   const handleSavePrice = useCallback((priceEntry: PriceDataEntry) => {
-    const result = updateOrAddPriceData(priceEntry); // Uses local PRICE_DATA
+    if (categories.length === 0) {
+        toast({ title: "Error", description: "Cannot save price, category data not loaded.", variant: "destructive" });
+        return;
+    }
+    // Pass 'categories' (which are from Firestore) to updateOrAddPriceData
+    const result = updateOrAddPriceData(priceEntry, categories); 
     if (result) {
-      setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices()))); // Refresh price table from local
+      // Refresh price table from local PRICE_DATA, using Firestore categories for combination generation
+      setPriceCombinations(JSON.parse(JSON.stringify(getAllPossibleCombinationsWithPrices(categories)))); 
       toast({ title: "Price Updated (Local)", description: `Price for the combination has been saved locally.` });
     } else {
       toast({ title: "Error Saving Price (Local)", description: "Failed to save price data. Check console for errors.", variant: "destructive" });
     }
-  }, [toast]);
+  }, [toast, categories]); // Add categories to dependency array
 
 
   return (
@@ -148,7 +153,7 @@ export default function AdminFurniturePage() {
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-2">
           <div className="flex-grow">
             <CardTitle className="text-2xl flex items-center"><Settings className="mr-2 h-6 w-6 text-primary" />Manage Furniture Categories (Firestore)</CardTitle>
-            <CardDescription>Add, edit, or delete furniture categories. Data is stored in Firestore. <br/> Note: Price data below is still managed locally for now.</CardDescription>
+            <CardDescription>Add, edit, or delete furniture categories. Data is stored in Firestore. <br/> Note: Price data below is still managed locally for now but combinations are based on Firestore categories.</CardDescription>
           </div>
           <Button onClick={handleAddCategory} className="w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
@@ -206,7 +211,7 @@ export default function AdminFurniturePage() {
             setEditingCategory(null);
           }}
           onSubmit={handleCategoryFormSubmit}
-          initialData={editingCategory} // Pass full category object if editing
+          initialData={editingCategory}
         />
       )}
 
@@ -217,7 +222,7 @@ export default function AdminFurniturePage() {
               <AlertDialogTitle>Are you sure you want to delete "{categoryToDelete.name}"?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action cannot be undone. This will permanently delete the category
-                and all its associated features, sizes from Firestore.
+                and all its associated features and sizes from Firestore.
                 Associated price data (if any, locally) will also be affected.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -235,17 +240,29 @@ export default function AdminFurniturePage() {
         <CardHeader>
             <CardTitle className="text-2xl flex items-center"><DollarSign className="mr-2 h-6 w-6 text-primary" />Manage Price Data (Local Data)</CardTitle>
             <CardDescription>
-                Define or update price ranges. This section currently uses in-memory data and will be migrated to Firestore later.
-                Rows highlighted in light yellow indicate combinations that do not yet have a specific price entry.
+                Define or update price ranges. Categories, features, and sizes are from Firestore; prices are saved locally.
+                Rows highlighted in light yellow indicate combinations that do not yet have a specific price entry in local data.
                 Use horizontal scroll if needed to see all columns.
             </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-auto max-h-[70vh] rounded-md border">
-            <PriceDataTable priceEntries={priceCombinations} onSavePrice={handleSavePrice} />
-          </div>
+          {isLoadingCategories && categories.length === 0 ? (
+             <div className="flex items-center justify-center py-10">
+              <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+              <p>Loading category data for price combinations...</p>
+            </div>
+          ) : priceCombinations.length === 0 && categories.length > 0 ? (
+             <p className="text-muted-foreground text-center py-4">No priceable combinations found. Ensure categories fetched from Firestore have sizes defined. If features exist, they must have options.</p>
+          ) : priceCombinations.length === 0 && categories.length === 0 && !isLoadingCategories ? (
+             <p className="text-muted-foreground text-center py-4">No categories loaded from Firestore. Add categories first to manage prices.</p>
+          ) : (
+            <div className="overflow-auto max-h-[70vh] rounded-md border">
+              <PriceDataTable priceEntries={priceCombinations} onSavePrice={handleSavePrice} />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
+

@@ -2,7 +2,7 @@
 import type { FurnitureCategory, PriceDataEntry, FurnitureFeatureConfig, FurnitureFeatureOption, FurnitureSizeConfig, UserSelections, DisplayablePriceEntry } from '@/lib/definitions';
 import { generateId } from '@/lib/utils';
 import { db } from '@/lib/firebase'; // Import Firestore instance
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, query, where, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 // --- Firestore Collection References ---
 const CATEGORIES_COLLECTION = 'categories';
@@ -36,10 +36,10 @@ export const getFirebaseCategories = async (): Promise<FurnitureCategory[]> => {
 
 export const addFirebaseCategory = async (categoryData: Omit<FurnitureCategory, 'id'>): Promise<FurnitureCategory | null> => {
   try {
-    const newId = generateId('cat');
+    const newId = categoryData.name.toLowerCase().replace(/\s+/g, '-') + '-' + generateId('fbcat'); // Make ID more readable
     const newCategory: FurnitureCategory = {
       ...categoryData,
-      id: newId, // Firestore will use this as the document ID
+      id: newId,
     };
     await setDoc(doc(db, CATEGORIES_COLLECTION, newId), newCategory);
     return newCategory;
@@ -52,7 +52,7 @@ export const addFirebaseCategory = async (categoryData: Omit<FurnitureCategory, 
 export const updateFirebaseCategory = async (categoryData: FurnitureCategory): Promise<FurnitureCategory | null> => {
   try {
     const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryData.id);
-    await setDoc(categoryRef, categoryData, { merge: true }); // Use setDoc with merge to update or create if not exists
+    await setDoc(categoryRef, categoryData, { merge: true });
     return categoryData;
   } catch (error) {
     console.error("Error updating category in Firestore:", error);
@@ -64,8 +64,7 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
   try {
     const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId);
     await deleteDoc(categoryRef);
-    // TODO: Later, also delete associated price data from a 'prices' collection.
-    // For now, PRICE_DATA is in-memory and will be filtered if needed by other local functions.
+    // Local PRICE_DATA cleanup (still relevant as long as PRICE_DATA is local)
     PRICE_DATA = PRICE_DATA.filter(p => p.categoryId !== categoryId);
     return true;
   } catch (error) {
@@ -75,9 +74,9 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
 };
 
 
-// == Local In-Memory Data (To be phased out or used for seeding/fallback) ==
-// IMPORTANT: The main estimator and price logic currently still use this local data.
-// Admin panel category edits will go to Firestore but won't reflect here automatically yet.
+// == Local In-Memory Data (PRICE_DATA is still local) ==
+// FURNITURE_CATEGORIES is now primarily a fallback or for initial seeding ideas.
+// The estimator and admin panel will fetch categories from Firestore.
 
 export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
   {
@@ -124,74 +123,7 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
       { id: 'sofas-size-large', label: 'Large (86+ inches)', iconName: 'Maximize2', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'spacious furniture' },
     ],
   },
-  {
-    id: 'tables',
-    name: 'Dining Tables',
-    iconName: 'Table2',
-    imagePlaceholder: 'https://placehold.co/400x300.png',
-    imageAiHint: 'dining table',
-    features: [
-      {
-        id: 'tables-feat-shape',
-        name: 'Shape',
-        selectionType: 'single',
-        options: [
-          { id: 'tables-feat-shape-opt-rect', label: 'Rectangular', iconName: 'RectangleHorizontal', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'rectangle table' },
-          { id: 'tables-feat-shape-opt-round', label: 'Round', iconName: 'Circle', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'round table' },
-          { id: 'tables-feat-shape-opt-square', label: 'Square', iconName: 'Square', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'square table' },
-        ],
-      },
-      {
-        id: 'tables-feat-material',
-        name: 'Table Material',
-        selectionType: 'single',
-        options: [
-          { id: 'tables-feat-material-opt-wood', label: 'Wood', iconName: 'TreeDeciduous', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'wood grain' },
-          { id: 'tables-feat-material-opt-glass', label: 'Glass', iconName: 'SquareDashedBottom', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'glass surface' },
-          { id: 'tables-feat-material-opt-metal', label: 'Metal', iconName: 'Settings2', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'metal surface' },
-        ],
-      },
-    ],
-    sizes: [
-      { id: 'tables-size-2-4', label: '2-4 Person', iconName: 'Users', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'small dining' },
-      { id: 'tables-size-4-6', label: '4-6 Person', iconName: 'Users', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'medium dining' },
-      { id: 'tables-size-6-8', label: '6-8 Person', iconName: 'Users', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'large dining' },
-    ],
-  },
-  {
-    id: 'beds',
-    name: 'Beds',
-    iconName: 'BedDouble',
-    imagePlaceholder: 'https://placehold.co/400x300.png',
-    imageAiHint: 'bedroom bed',
-    features: [
-      {
-        id: 'beds-feat-frame',
-        name: 'Frame Material',
-        selectionType: 'single',
-        options: [
-          { id: 'beds-feat-frame-opt-wood', label: 'Wood', iconName: 'Construction', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'wood frame' },
-          { id: 'beds-feat-frame-opt-metal', label: 'Metal', iconName: 'Shield', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'metal frame' },
-          { id: 'beds-feat-frame-opt-upholstered', label: 'Upholstered', iconName: 'Pillow', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'fabric frame' },
-        ],
-      },
-      {
-        id: 'beds-feat-headboard',
-        name: 'Headboard',
-        selectionType: 'single',
-        options: [
-          { id: 'beds-feat-headboard-opt-yes', label: 'With Headboard', iconName: 'SquareArrowUp', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'bed headboard' },
-          { id: 'beds-feat-headboard-opt-no', label: 'Without Headboard', iconName: 'SquareDashedBottom', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'simple bed' },
-        ],
-      },
-    ],
-    sizes: [
-      { id: 'beds-size-twin', label: 'Twin', iconName: 'BedSingle', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'single bed' },
-      { id: 'beds-size-full', label: 'Full', iconName: 'Bed', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'double bed' },
-      { id: 'beds-size-queen', label: 'Queen', iconName: 'BedDouble', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'queen size' },
-      { id: 'beds-size-king', label: 'King', iconName: 'BedDouble', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'king size' },
-    ],
-  },
+  // ... other default categories (can be removed if Firestore is source of truth and seeded)
 ];
 
 export let PRICE_DATA: PriceDataEntry[] = [
@@ -214,235 +146,44 @@ export let PRICE_DATA: PriceDataEntry[] = [
   { categoryId: 'beds', featureSelections: { 'beds-feat-frame': 'beds-feat-frame-opt-upholstered', 'beds-feat-headboard': 'beds-feat-headboard-opt-yes' }, sizeId: 'beds-size-full', priceRange: { min: 500, max: 1200 } },
 ];
 
-// == Local In-Memory Category CRUD (Admin panel will use Firestore versions now) ==
-// These will be removed or significantly altered once Firestore migration is complete for categories.
+// == Pricing and Description Logic ==
 
-export const addCategory = (categoryData: Omit<FurnitureCategory, 'id' | 'features' | 'sizes'>): FurnitureCategory => {
-  // This local version will likely be deprecated or used for local-only/testing scenarios.
-  const newCategory: FurnitureCategory = {
-    ...categoryData,
-    id: generateId('cat-local'),
-    features: [],
-    sizes: [],
-    imagePlaceholder: categoryData.imagePlaceholder || `https://placehold.co/400x300.png`,
-    imageAiHint: categoryData.imageAiHint || categoryData.name.toLowerCase(),
-  };
-  FURNITURE_CATEGORIES.push(newCategory);
-  return newCategory;
-};
-
-export const updateCategory = (updatedCategory: FurnitureCategory): FurnitureCategory | null => {
-  // This local version will likely be deprecated.
-  const index = FURNITURE_CATEGORIES.findIndex(c => c.id === updatedCategory.id);
-  if (index !== -1) {
-    FURNITURE_CATEGORIES[index] = {
-        ...updatedCategory,
-        imagePlaceholder: updatedCategory.imagePlaceholder || `https://placehold.co/400x300.png`,
-        imageAiHint: updatedCategory.imageAiHint || updatedCategory.name.toLowerCase(),
-    };
-    return updatedCategory;
-  }
-  return null;
-};
-
-export const deleteCategory = (categoryId: string): boolean => {
-  // This local version will likely be deprecated.
-  const initialLength = FURNITURE_CATEGORIES.length;
-  FURNITURE_CATEGORIES = FURNITURE_CATEGORIES.filter(c => c.id !== categoryId);
-  PRICE_DATA = PRICE_DATA.filter(p => p.categoryId !== categoryId);
-  return FURNITURE_CATEGORIES.length < initialLength;
-};
-
-
-// == Local In-Memory Feature/Size/Option CRUD (Used by CategoryFormDialog if operating on local data) ==
-// These will need to be adapted if CategoryFormDialog directly calls Firestore,
-// or if it operates on a local copy of category data fetched from Firestore.
-// For now, they modify the local FURNITURE_CATEGORIES array.
-
-// Feature Management (Local - for reference or until full migration)
-export const addFeatureToCategory = (categoryId: string, featureData: Omit<FurnitureFeatureConfig, 'id' | 'options'>): FurnitureFeatureConfig | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const newFeature: FurnitureFeatureConfig = {
-      ...featureData,
-      id: generateId(`${categoryId}-feat`),
-      selectionType: featureData.selectionType || 'single',
-      options: [],
-    };
-    category.features.push(newFeature);
-    return newFeature;
-  }
-  return null;
-};
-
-export const updateFeatureInCategory = (categoryId: string, updatedFeature: FurnitureFeatureConfig): FurnitureFeatureConfig | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const featureIndex = category.features.findIndex(f => f.id === updatedFeature.id);
-    if (featureIndex !== -1) {
-      category.features[featureIndex] = {
-        ...updatedFeature,
-        selectionType: updatedFeature.selectionType || 'single',
-      };
-      return category.features[featureIndex];
-    }
-  }
-  return null;
-};
-
-export const deleteFeatureFromCategory = (categoryId: string, featureId: string): boolean => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const initialLength = category.features.length;
-    category.features = category.features.filter(f => f.id !== featureId);
-    PRICE_DATA = PRICE_DATA.filter(p => {
-      if (p.categoryId !== categoryId) return true;
-      const featureValue = p.featureSelections[featureId];
-      if (featureValue === undefined) return true;
-      return false;
-    });
-    return category.features.length < initialLength;
-  }
-  return false;
-};
-
-// Feature Option Management (Local)
-export const addOptionToFeature = (categoryId: string, featureId: string, optionData: Omit<FurnitureFeatureOption, 'id'>): FurnitureFeatureOption | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const feature = category.features.find(f => f.id === featureId);
-    if (feature) {
-      const newOption: FurnitureFeatureOption = { 
-        ...optionData,
-        id: generateId(`${featureId}-opt`),
-        iconName: optionData.iconName || "", 
-        imagePlaceholder: optionData.imagePlaceholder || `https://placehold.co/50x50.png`, 
-        imageAiHint: optionData.imageAiHint || optionData.label.toLowerCase(), 
-      };
-      feature.options.push(newOption);
-      return newOption;
-    }
-  }
-  return null;
-};
-
-export const updateOptionInFeature = (categoryId: string, featureId: string, updatedOption: FurnitureFeatureOption): FurnitureFeatureOption | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const feature = category.features.find(f => f.id === featureId);
-    if (feature) {
-      const optionIndex = feature.options.findIndex(o => o.id === updatedOption.id);
-      if (optionIndex !== -1) {
-        feature.options[optionIndex] = {
-            ...feature.options[optionIndex], 
-            ...updatedOption, 
-            imagePlaceholder: updatedOption.imagePlaceholder || `https://placehold.co/50x50.png`,
-            imageAiHint: updatedOption.imageAiHint || updatedOption.label.toLowerCase(),
-        };
-        return feature.options[optionIndex];
-      }
-    }
-  }
-  return null;
-};
-
-export const deleteOptionFromFeature = (categoryId: string, featureId: string, optionId: string): boolean => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const feature = category.features.find(f => f.id === featureId);
-    if (feature) {
-      const initialLength = feature.options.length;
-      feature.options = feature.options.filter(o => o.id !== optionId);
-      PRICE_DATA = PRICE_DATA.filter(p => {
-        if (p.categoryId !== categoryId) return true;
-        const selectionForFeature = p.featureSelections[featureId];
-        if (typeof selectionForFeature === 'string') {
-          return selectionForFeature !== optionId;
-        } else if (Array.isArray(selectionForFeature)) {
-          return !selectionForFeature.includes(optionId);
-        }
-        return true;
-      });
-      return feature.options.length < initialLength;
-    }
-  }
-  return false;
-};
-
-
-// Size Management (Local)
-export const addSizeToCategory = (categoryId: string, sizeData: Omit<FurnitureSizeConfig, 'id'>): FurnitureSizeConfig | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const newSize: FurnitureSizeConfig = { 
-      ...sizeData,
-      id: generateId(`${categoryId}-size`),
-      iconName: sizeData.iconName || '', 
-      imagePlaceholder: sizeData.imagePlaceholder || `https://placehold.co/80x80.png`, 
-      imageAiHint: sizeData.imageAiHint || sizeData.label.toLowerCase(), 
-    };
-    category.sizes.push(newSize);
-    return newSize;
-  }
-  return null;
-};
-
-export const updateSizeInCategory = (categoryId: string, updatedSize: FurnitureSizeConfig): FurnitureSizeConfig | null => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const sizeIndex = category.sizes.findIndex(s => s.id === updatedSize.id);
-    if (sizeIndex !== -1) {
-      category.sizes[sizeIndex] = {
-          ...category.sizes[sizeIndex],
-          ...updatedSize,
-          imagePlaceholder: updatedSize.imagePlaceholder || `https://placehold.co/80x80.png`,
-          imageAiHint: updatedSize.imageAiHint || updatedSize.label.toLowerCase(),
-      };
-      return category.sizes[sizeIndex];
-    }
-  }
-  return null;
-};
-
-export const deleteSizeFromCategory = (categoryId: string, sizeId: string): boolean => {
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (category) {
-    const initialLength = category.sizes.length;
-    category.sizes = category.sizes.filter(s => s.id !== sizeId);
-    PRICE_DATA = PRICE_DATA.filter(p => !(p.categoryId === categoryId && p.sizeId === sizeId));
-    return category.sizes.length < initialLength;
-  }
-  return false;
-};
-
-// == Pricing and Description Logic (Still uses local FURNITURE_CATEGORIES and PRICE_DATA) ==
-// These functions will need to be updated to fetch data from Firestore in a later step.
-
+// getEstimatedPrice still uses local PRICE_DATA.
+// It also needs access to the category definition to know about its features.
+// If categories are fetched async, this function needs the specific category data.
 export function getEstimatedPrice(
   categoryId: string | null,
   featureSelectionsFromUser: Record<string, string | string[]>,
-  sizeId: string | null
+  sizeId: string | null,
+  availableCategories: FurnitureCategory[] // Pass the currently available categories
 ): PriceDataEntry | null {
   if (!categoryId || !sizeId) return null;
 
-  // IMPORTANT: Uses local FURNITURE_CATEGORIES for now.
-  const category = FURNITURE_CATEGORIES.find(c => c.id === categoryId);
-  if (!category) return null;
+  const category = availableCategories.find(c => c.id === categoryId);
+  if (!category) {
+    console.warn(`Category with id ${categoryId} not found in provided categories for price estimation.`);
+    return null; // Category definition needed to correctly interpret featureSelections
+  }
 
   const entry = PRICE_DATA.find(item => {
     if (item.categoryId !== categoryId || item.sizeId !== sizeId) {
       return false;
     }
+    // If category has no features, an empty featureSelections object should match
     if (category.features.length === 0) {
-      return Object.keys(item.featureSelections).length === 0;
+      return Object.keys(item.featureSelections).length === 0 && Object.keys(featureSelectionsFromUser).length === 0;
     }
     return category.features.every(featureConfig => {
       const userSelectionForFeature = featureSelectionsFromUser[featureConfig.id];
       const priceDataSelectionForFeature = item.featureSelections[featureConfig.id];
-      if (userSelectionForFeature === undefined && priceDataSelectionForFeature === undefined) return true;
-      if (userSelectionForFeature === undefined || priceDataSelectionForFeature === undefined) return false;
+
+      // If a feature is defined in the category but not selected by user and not in price data, it's a match for that feature.
+      // Or if a feature is defined, selected by user, and present in price data, then values must match.
       const canonicalUserValue = getCanonicalFeatureValue(userSelectionForFeature);
       const canonicalPriceDataValue = getCanonicalFeatureValue(priceDataSelectionForFeature);
+
+      if (canonicalUserValue === '' && canonicalPriceDataValue === '') return true; // Both are considered "not set" for this feature
+
       return canonicalUserValue === canonicalPriceDataValue;
     });
   });
@@ -451,11 +192,10 @@ export function getEstimatedPrice(
 
 export function generateItemDescription(
   selections: UserSelections,
-  categoriesData: FurnitureCategory[] // Changed to accept categories data
+  categoriesData: FurnitureCategory[] // Now expects categories data
 ): string {
   if (!selections.categoryId) return "No item selected";
 
-  // IMPORTANT: Expects categoriesData (e.g., local FURNITURE_CATEGORIES or fetched from Firestore).
   const category = categoriesData.find(c => c.id === selections.categoryId);
   if (!category) return "Unknown category";
 
@@ -496,11 +236,10 @@ export function generateItemDescription(
 
 export function getFinalImageForSelections(
   selections: UserSelections,
-  allCategoriesData: FurnitureCategory[] // Changed to accept categories data
+  allCategoriesData: FurnitureCategory[] // Now expects categories data
 ): { finalImageUrl: string | null; finalImageAiHint: string | null } {
   if (!selections.categoryId) return { finalImageUrl: null, finalImageAiHint: null };
 
-  // IMPORTANT: Expects allCategoriesData.
   const category = allCategoriesData.find(c => c.id === selections.categoryId);
   const defaultImage = 'https://placehold.co/400x300.png';
   const defaultHint = 'furniture';
@@ -510,6 +249,7 @@ export function getFinalImageForSelections(
   let finalImageUrl = category.imagePlaceholder || defaultImage;
   let finalImageAiHint = category.imageAiHint || category.name.toLowerCase() || defaultHint;
   
+  // Prioritize size image if available
   if (selections.sizeId) {
     const sizeConfig = category.sizes.find(s => s.id === selections.sizeId);
     if (sizeConfig?.imagePlaceholder) {
@@ -518,16 +258,17 @@ export function getFinalImageForSelections(
     }
   }
   
+  // Then, override with feature image if a more specific one is available from the *first* selected feature option that has an image
   for (const feature of category.features) {
     const selectedValue = selections.featureSelections[feature.id];
     if (selectedValue) {
       const firstSelectedOptionId = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
-      if (firstSelectedOptionId) {
+      if (firstSelectedOptionId) { // Ensure there's at least one selection
         const option = feature.options.find(opt => opt.id === firstSelectedOptionId);
         if (option?.imagePlaceholder) {
           finalImageUrl = option.imagePlaceholder;
           finalImageAiHint = option.imageAiHint || option.label.toLowerCase();
-          break; 
+          break; // Use the first feature option image found
         }
       }
     }
@@ -536,55 +277,57 @@ export function getFinalImageForSelections(
 }
 
 function getPowerSet<T>(array: T[]): T[][] {
-    const result: T[][] = [[]];
+    const result: T[][] = [[]]; // Include empty set for combinations where a multi-select feature might not be chosen
     for (const value of array) {
         const length = result.length;
         for (let i = 0; i < length; i++) {
             result.push(result[i].concat(value));
         }
     }
-    return result.filter(subset => subset.length > 0);
+    // Return all subsets, including empty for "none selected" and single/multiple items
+    // The filter for subset.length > 0 was removed to allow "no option selected" for a multi-feature
+    return result;
 }
 
-export function getAllPossibleCombinationsWithPrices(): DisplayablePriceEntry[] {
-  // IMPORTANT: Still uses local FURNITURE_CATEGORIES and PRICE_DATA.
-  // This will need a major rewrite to work with Firestore data for both categories and prices.
+//getAllPossibleCombinationsWithPrices now takes categories from Firestore
+export function getAllPossibleCombinationsWithPrices(
+  categoriesFromFirestore: FurnitureCategory[]
+): DisplayablePriceEntry[] {
   const allCombinations: DisplayablePriceEntry[] = [];
 
-  FURNITURE_CATEGORIES.forEach(category => {
+  categoriesFromFirestore.forEach(category => {
     const generateFeaturePermutations = (
       featureIndex: number,
-      currentSelections: Record<string, string | string[]>
+      currentSelections: Record<string, string | string[]> // string[] for multi-select
     ): Record<string, string | string[]>[] => {
       if (featureIndex >= category.features.length) {
         return [currentSelections];
       }
       const feature = category.features[featureIndex];
       let permutations: Record<string, string | string[]>[] = [];
-      if (feature.options.length === 0) {
+
+      if (feature.options.length === 0) { // No options for this feature
         return generateFeaturePermutations(featureIndex + 1, currentSelections);
       }
+
       if (feature.selectionType === 'multiple') {
         const optionSubsets = getPowerSet(feature.options.map(opt => opt.id));
-        if (optionSubsets.length === 0) {
-             permutations = permutations.concat(
-                generateFeaturePermutations(featureIndex + 1, currentSelections)
+         // For multi-select, an "empty" selection (no options picked for THIS feature) is valid.
+        // So, we iterate through all subsets, including the empty one.
+        optionSubsets.forEach(subset => {
+            const nextSelections = {
+                ...currentSelections,
+                ...(subset.length > 0 && { [feature.id]: subset.sort() }) // Store as array, or omit if empty
+            };
+            permutations = permutations.concat(
+                generateFeaturePermutations(featureIndex + 1, nextSelections)
             );
-        } else {
-            optionSubsets.forEach(subset => {
-              if (subset.length > 0) {
-                const nextSelections = {
-                  ...currentSelections,
-                  [feature.id]: subset.sort().join(','),
-                };
-                permutations = permutations.concat(
-                  generateFeaturePermutations(featureIndex + 1, nextSelections)
-                );
-              }
-            });
-        }
-      } else {
-        for (const option of feature.options) {
+        });
+
+      } else { // Single select
+        // Also include a "not selected" path for single-select if desired for price table (e.g. feature not mandatory)
+        // For now, assume single-select features must have one option chosen for a "complete" combination.
+        feature.options.forEach(option => {
           const nextSelections = {
             ...currentSelections,
             [feature.id]: option.id,
@@ -592,54 +335,51 @@ export function getAllPossibleCombinationsWithPrices(): DisplayablePriceEntry[] 
           permutations = permutations.concat(
             generateFeaturePermutations(featureIndex + 1, nextSelections)
           );
-        }
+        });
       }
       return permutations;
     };
 
     const featurePermutations: Record<string, string | string[]>[] = category.features.length > 0
       ? generateFeaturePermutations(0, {})
-      : [{}]; 
+      : [{}]; // If no features, just one empty permutation
 
-    if (category.sizes.length === 0) return; 
+    if (category.sizes.length === 0 && category.features.length > 0) return; // Skip if features exist but no sizes
 
-    category.sizes.forEach(size => {
+    const sizesToIterate = category.sizes.length > 0 ? category.sizes : [{id: 'default-size', label:'Standard'} as FurnitureSizeConfig];
+
+
+    sizesToIterate.forEach(size => {
       featurePermutations.forEach(currentFeatureSelections => {
-        const relevantFeatureSelections: Record<string, string | string[]> = {};
-        category.features.forEach(f => {
-            if(currentFeatureSelections[f.id] !== undefined) {
-                relevantFeatureSelections[f.id] = currentFeatureSelections[f.id];
-            }
-        });
         const userSelections: UserSelections = {
           categoryId: category.id,
-          featureSelections: relevantFeatureSelections,
+          featureSelections: currentFeatureSelections, // Already in correct format {featId: optId or optId[]}
           sizeId: size.id,
         };
-        const fullDescription = generateItemDescription(userSelections, FURNITURE_CATEGORIES);
-        const existingPriceEntry = getEstimatedPrice(category.id, relevantFeatureSelections, size.id);
+        // Pass categoriesFromFirestore to generateItemDescription
+        const fullDescription = generateItemDescription(userSelections, categoriesFromFirestore);
+        
+        // getEstimatedPrice still uses local PRICE_DATA but needs categoriesFromFirestore for context
+        const existingPriceEntry = getEstimatedPrice(category.id, currentFeatureSelections, size.id, categoriesFromFirestore);
+        
         const featureParts: string[] = [];
         category.features.forEach(fConf => {
-          const selectedValue = relevantFeatureSelections[fConf.id];
+          const selectedValue = currentFeatureSelections[fConf.id];
           if (selectedValue) {
-            if (Array.isArray(selectedValue)) {
-                const optionLabels = selectedValue.map(id => fConf.options.find(o => o.id === id)?.label).filter(Boolean);
-                if(optionLabels.length > 0) featureParts.push(`${fConf.name}: ${optionLabels.join(' & ')}`);
-            } else if (typeof selectedValue === 'string' && fConf.selectionType === 'multiple') {
-                 const ids = selectedValue.split(',');
-                 const optionLabels = ids.map(id => fConf.options.find(o => o.id === id)?.label).filter(Boolean);
-                 if(optionLabels.length > 0) featureParts.push(`${fConf.name}: ${optionLabels.join(' & ')}`);
-            } else {
-              const opt = fConf.options.find(o => o.id === selectedValue);
-              if (opt) featureParts.push(`${fConf.name}: ${opt.label}`);
+            const selectedOptionLabels = (Array.isArray(selectedValue) ? selectedValue : [selectedValue])
+              .map(optId => fConf.options.find(o => o.id === optId)?.label)
+              .filter(Boolean) as string[];
+            if (selectedOptionLabels.length > 0) {
+              featureParts.push(`${fConf.name}: ${selectedOptionLabels.join(' & ')}`);
             }
           }
         });
-        const featureDescription = featureParts.join(', ') || 'N/A';
+        const featureDescription = featureParts.join(', ') || (category.features.length > 0 ? 'Base Model' : 'N/A');
+        
         allCombinations.push({
           categoryId: category.id,
           categoryName: category.name,
-          featureSelections: relevantFeatureSelections,
+          featureSelections: currentFeatureSelections,
           featureDescription: featureDescription,
           sizeId: size.id,
           sizeLabel: size.label,
@@ -653,48 +393,58 @@ export function getAllPossibleCombinationsWithPrices(): DisplayablePriceEntry[] 
   return allCombinations;
 }
 
-export const updateOrAddPriceData = (entry: PriceDataEntry): PriceDataEntry | null => {
-  // IMPORTANT: Still uses local FURNITURE_CATEGORIES and PRICE_DATA.
-  // This will need to be updated for Firestore.
-  const category = FURNITURE_CATEGORIES.find(c => c.id === entry.categoryId);
-  if (!category) return null;
+// updateOrAddPriceData still modifies local PRICE_DATA.
+// It needs categoriesFromFirestore to correctly interpret feature selections for canonicalization.
+export const updateOrAddPriceData = (entry: PriceDataEntry, categoriesFromFirestore: FurnitureCategory[]): PriceDataEntry | null => {
+  const category = categoriesFromFirestore.find(c => c.id === entry.categoryId);
+  if (!category) {
+      console.error("Category not found for price update:", entry.categoryId);
+      return null;
+  }
 
   if (entry.priceRange.min < 0 || entry.priceRange.max < 0 || entry.priceRange.min > entry.priceRange.max) {
     console.error("Invalid price range for update/add:", entry.priceRange);
     return null;
   }
   
+  // Canonicalize selections based on the actual category definition
   const canonicalEntrySelections: Record<string, string> = {};
   category.features.forEach(featConf => {
       const val = entry.featureSelections[featConf.id];
-      if (val !== undefined) {
+      if (val !== undefined) { // Only include features that were actually part of the entry
           canonicalEntrySelections[featConf.id] = getCanonicalFeatureValue(val);
       }
   });
 
   const index = PRICE_DATA.findIndex(p => {
     if (p.categoryId !== entry.categoryId || p.sizeId !== entry.sizeId) return false;
+    
+    const pCategory = categoriesFromFirestore.find(c => c.id === p.categoryId);
+    if(!pCategory) return false; // Should not happen if data is consistent
+
     const pCanonicalSelections: Record<string, string> = {};
-    category.features.forEach(featConf => {
+    pCategory.features.forEach(featConf => {
         const val = p.featureSelections[featConf.id];
-         if (val !== undefined) {
+         if (val !== undefined) { // Only include features that were part of stored price data
             pCanonicalSelections[featConf.id] = getCanonicalFeatureValue(val);
         }
     });
-    if (Object.keys(canonicalEntrySelections).length !== Object.keys(pCanonicalSelections).length) return false;
-    return Object.keys(canonicalEntrySelections).every(featId => canonicalEntrySelections[featId] === pCanonicalSelections[featId]);
+
+    // Check if all keys in canonicalEntrySelections are in pCanonicalSelections and vice-versa, and values match
+    const entryKeys = Object.keys(canonicalEntrySelections);
+    const pKeys = Object.keys(pCanonicalSelections);
+
+    if (entryKeys.length !== pKeys.length) return false;
+    return entryKeys.every(featId => canonicalEntrySelections[featId] === pCanonicalSelections[featId]);
   });
 
+  const entryToSave = { ...entry, featureSelections: canonicalEntrySelections };
+
   if (index !== -1) {
-    PRICE_DATA[index].priceRange = entry.priceRange;
-    PRICE_DATA[index].featureSelections = canonicalEntrySelections; 
+    PRICE_DATA[index] = entryToSave;
     return PRICE_DATA[index];
   } else {
-    const newPriceEntry: PriceDataEntry = { 
-        ...entry, 
-        featureSelections: canonicalEntrySelections
-    };
-    PRICE_DATA.push(newPriceEntry);
-    return newPriceEntry;
+    PRICE_DATA.push(entryToSave);
+    return entryToSave;
   }
 };
