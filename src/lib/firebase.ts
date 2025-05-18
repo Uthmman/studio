@@ -2,7 +2,7 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
-import { getFirestore, type Firestore }_ from "firebase/firestore";
+import { getFirestore, type Firestore } from "firebase/firestore";
 
 // TODO: Add your own Firebase configuration from your Firebase project console
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
