@@ -37,13 +37,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
-      {
-        protocol: 'https',
-        hostname: 'firebasestorage.googleapis.com', // Added for Firebase Storage
-        port: '',
-        pathname: '/**',
-      },
+      // Removed firebasestorage.googleapis.com if it was solely for category images
+      // Data URIs do not need a remote pattern.
     ],
+    // Allow data URIs for next/image
+    dangerouslyAllowSVG: true, // While not directly for data URIs, often related to flexible src types
+    contentSecurityPolicy: "default-src 'self'; img-src * data: blob:; script-src 'unsafe-eval' 'unsafe-inline' *;",
   },
 };
 

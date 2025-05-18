@@ -27,17 +27,16 @@ import { useToast } from "@/hooks/use-toast";
 import { generateId } from "@/lib/utils";
 import NextImage from "next/image"; // Renamed to avoid conflict with Lucide's Image icon
 import * as LucideIcons from "lucide-react";
-import { uploadImageToFirebaseStorage, deleteImageFromFirebaseStorage } from "@/lib/storage-utils"; // Added
 
 const DEFAULT_PLACEHOLDER_URL = "https://placehold.co/400x300.png";
 
 const categorySchema = z.object({
   name: z.string().min(1, "Category name is required"),
   iconName: z.string().min(1, "Icon name is required (e.g., Sofa, BedDouble from lucide-react)"),
-  // imagePlaceholder is now handled by file upload, URL will be set programmatically.
-  // It's not directly part of the RHF Zod schema in the same way if it's a file.
-  // However, we will still manage its string (URL) value via RHF.
-  imagePlaceholder: z.string().url("Must be a valid URL or will be set by upload").or(z.literal("")).optional(),
+  // imagePlaceholder will store the Data URI string or a placeholder URL
+  imagePlaceholder: z.string().refine(val => val.startsWith('data:image/') || val.startsWith('http://') || val.startsWith('https://') || val === '', {
+    message: "Must be a valid Data URI, URL, or empty",
+  }).optional(),
   imageAiHint: z.string().max(50, "AI hint too long").optional(),
 });
 type CategoryFormData = z.infer<typeof categorySchema>;
@@ -48,6 +47,15 @@ interface CategoryFormDialogProps {
   onSubmit: (category: FurnitureCategory) => void;
   initialData?: FurnitureCategory | null;
 }
+
+// Helper to convert File to Data URI
+const fileToDataUri = (file: File): Promise<string> => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result as string);
+  reader.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
 
 export default function CategoryFormDialog({
   isOpen,
@@ -103,22 +111,36 @@ export default function CategoryFormDialog({
   }, [initialData, resetCategoryForm, isOpen]);
 
   useEffect(() => {
-    // If a new file is selected, update the preview
+    let objectUrl: string | null = null;
     if (selectedImageFile) {
-      const objectUrl = URL.createObjectURL(selectedImageFile);
+      objectUrl = URL.createObjectURL(selectedImageFile);
       setImagePreview(objectUrl);
-      // Clean up the object URL when the component unmounts or file changes
-      return () => URL.revokeObjectURL(objectUrl);
     } else {
-      // If no file selected, show the placeholder from the form (which might be initialData's or default)
       setImagePreview(watchedImagePlaceholder || DEFAULT_PLACEHOLDER_URL);
     }
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
   }, [selectedImageFile, watchedImagePlaceholder]);
 
 
   const handleImageFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      setSelectedImageFile(event.target.files[0]);
+      const file = event.target.files[0];
+      // Basic validation for image size (e.g., 1MB for Data URIs)
+      if (file.size > 1024 * 1024) { // 1MB
+        toast({
+          title: "Image Too Large",
+          description: "Please select an image smaller than 1MB for Data URI storage.",
+          variant: "destructive",
+        });
+        setSelectedImageFile(null);
+        event.target.value = ""; // Clear the input
+        return;
+      }
+      setSelectedImageFile(file);
     } else {
       setSelectedImageFile(null);
     }
@@ -131,37 +153,33 @@ export default function CategoryFormDialog({
      }
 
     let finalImagePlaceholder = data.imagePlaceholder || DEFAULT_PLACEHOLDER_URL;
-    const oldImagePlaceholder = initialData?.imagePlaceholder;
 
     if (selectedImageFile) {
-      const pathPrefix = `furniture_images/categories/${initialData?.id || data.name.toLowerCase().replace(/\s+/g, '-')}`;
-      const uploadedUrl = await uploadImageToFirebaseStorage(selectedImageFile, pathPrefix);
-      if (uploadedUrl) {
-        finalImagePlaceholder = uploadedUrl;
-        setValue("imagePlaceholder", uploadedUrl); // Update RHF state
-        // Optionally delete old image if it's different and was a Firebase URL
-        if (oldImagePlaceholder && oldImagePlaceholder !== uploadedUrl && oldImagePlaceholder.includes('firebasestorage')) {
-          await deleteImageFromFirebaseStorage(oldImagePlaceholder);
-        }
-      } else {
-        toast({ title: "Image Upload Failed", description: "Could not upload image. Previous or default image will be used.", variant: "destructive" });
+      try {
+        const dataUri = await fileToDataUri(selectedImageFile);
+        finalImagePlaceholder = dataUri;
+        setValue("imagePlaceholder", dataUri); // Update RHF state with Data URI
+      } catch (error) {
+        console.error("Error converting file to Data URI:", error);
+        toast({ title: "Image Processing Failed", description: "Could not process image. Previous or default image will be used.", variant: "destructive" });
         // Keep finalImagePlaceholder as data.imagePlaceholder (which could be old URL or default)
       }
     }
 
     const completeCategoryData: FurnitureCategory = {
       id: initialData?.id || generateId('cat'),
-      ...data, // contains name, iconName, imageAiHint, and potentially the old imagePlaceholder
-      imagePlaceholder: finalImagePlaceholder, // this is now the potentially new URL
+      name: data.name,
+      iconName: data.iconName,
+      imagePlaceholder: finalImagePlaceholder, 
       imageAiHint: data.imageAiHint || data.name.toLowerCase().split(" ").slice(0,2).join(" "), 
       features,
       sizes,
     };
     onSubmit(completeCategoryData);
-    // onClose(); // onSubmit from parent usually handles closing
+    // onClose(); // Parent usually handles closing
   };
 
-  // Feature Management (omitted for brevity - unchanged)
+  // Feature Management
   const handleAddFeature = () => { setEditingFeature(null); setIsFeatureFormOpen(true); };
   const handleEditFeature = (feature: FurnitureFeatureConfig) => { setEditingFeature(feature); setIsFeatureFormOpen(true); };
   const handleDeleteFeature = (featureId: string) => { setFeatures(prev => prev.filter(f => f.id !== featureId)); toast({ title: "Feature Deleted" }); };
@@ -172,7 +190,7 @@ export default function CategoryFormDialog({
     setIsFeatureFormOpen(false);
   }, [toast]);
 
-  // Size Management (omitted for brevity - unchanged)
+  // Size Management
   const [isSizeFormOpen, setIsSizeFormOpen] = useState(false);
   const [editingSize, setEditingSize] = useState<FurnitureSizeConfig | null>(null);
   const handleAddSize = () => { setEditingSize(null); setIsSizeFormOpen(true); };
@@ -185,7 +203,6 @@ export default function CategoryFormDialog({
     setIsSizeFormOpen(false);
   }, [toast]);
 
-  // Feature Dialog state (omitted for brevity - unchanged)
   const [isFeatureFormOpen, setIsFeatureFormOpen] = useState(false);
   const [editingFeature, setEditingFeature] = useState<FurnitureFeatureConfig | null>(null);
 
@@ -198,11 +215,10 @@ export default function CategoryFormDialog({
         <DialogHeader>
           <DialogTitle>{initialData ? "Edit" : "Add New"} Furniture Category</DialogTitle>
           <DialogDescription>
-            Manage the category details, its features, available sizes, and image.
+            Manage the category details, its features, available sizes, and image. Images will be stored as Data URIs (max 1MB).
           </DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[calc(80vh-100px)] pr-6"> 
-          {/* Form submission is now handled by the footer button */}
           <div className="space-y-6 py-4">
             <Card>
               <CardHeader>
@@ -220,9 +236,8 @@ export default function CategoryFormDialog({
                   {categoryErrors.iconName && <p className="text-sm text-destructive mt-1">{categoryErrors.iconName.message}</p>}
                 </div>
                 
-                {/* Image Upload Section */}
                 <div className="space-y-2">
-                  <Label htmlFor="categoryImage">Category Image</Label>
+                  <Label htmlFor="categoryImage">Category Image (Max 1MB)</Label>
                   {imagePreview && (
                     <div className="mt-2 relative w-full aspect-video rounded-md border overflow-hidden bg-muted">
                       <NextImage src={imagePreview} alt="Category preview" fill style={{ objectFit: 'contain' }} sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
@@ -233,7 +248,12 @@ export default function CategoryFormDialog({
                         <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
                     </Button>
                      {selectedImageFile && (
-                        <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedImageFile(null)}>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => {
+                            setSelectedImageFile(null);
+                            (document.getElementById('categoryImageUpload') as HTMLInputElement).value = ""; // Clear file input
+                            setValue("imagePlaceholder", initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL); // Reset to original or default
+                            setImagePreview(initialData?.imagePlaceholder || DEFAULT_PLACEHOLDER_URL);
+                        }}>
                             Clear Selection
                         </Button>
                     )}
@@ -243,20 +263,18 @@ export default function CategoryFormDialog({
                     type="file"
                     accept="image/png, image/jpeg, image/gif, image/webp"
                     onChange={handleImageFileChange}
-                    className="hidden" // Hidden, triggered by button
+                    className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground">Upload a PNG, JPG, GIF or WEBP file. Max 2MB recommended.</p>
+                  <p className="text-xs text-muted-foreground">Upload PNG, JPG, GIF, WEBP. Max 1MB (stored as Data URI).</p>
+                   {categoryErrors.imagePlaceholder && <p className="text-sm text-destructive mt-1">{categoryErrors.imagePlaceholder.message}</p>}
                 </div>
-                {/* End Image Upload Section */}
 
                 <div>
                   <Label htmlFor="imageAiHint">Image AI Hint (max 2 words for image generation/search)</Label>
                   <Input id="imageAiHint" {...register("imageAiHint")} placeholder="e.g., living room sofa" className={categoryErrors.imageAiHint ? "border-destructive" : ""} />
                   {categoryErrors.imageAiHint && <p className="text-sm text-destructive mt-1">{categoryErrors.imageAiHint.message}</p>}
                 </div>
-                {/* Hidden input to store the image URL managed by RHF, potentially updated by upload */}
                 <input type="hidden" {...register("imagePlaceholder")} />
-
               </CardContent>
             </Card>
 
@@ -304,7 +322,7 @@ export default function CategoryFormDialog({
                                         alt={opt.label} 
                                         fill
                                         style={{ objectFit: 'cover' }}
-                                        sizes="(max-width: 768px) 50vw, 33vw" // Consider adjusting sizes
+                                        sizes="(max-width: 768px) 50vw, 33vw"
                                         data-ai-hint={opt.imageAiHint || opt.label}
                                       />
                                     </div>
@@ -347,7 +365,7 @@ export default function CategoryFormDialog({
                                         alt={size.label} 
                                         fill
                                         style={{ objectFit: 'cover' }}
-                                        sizes="(max-width: 768px) 50vw, 33vw" // Consider adjusting sizes
+                                        sizes="(max-width: 768px) 50vw, 33vw"
                                         data-ai-hint={size.imageAiHint || size.label}
                                       />
                                     </div>
