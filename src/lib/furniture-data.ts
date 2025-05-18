@@ -34,8 +34,6 @@ const generatePriceDocumentId = (
       }
     });
   const featuresString = canonicalFeatures.join(';');
-  // Replace characters not suitable for Firestore IDs if necessary, but Firestore is quite flexible.
-  // Using underscores and hyphens should be safe.
   return `${categoryId}_${featuresString}_${sizeId}`.replace(/[^a-zA-Z0-9_.;=-]/g, '-');
 };
 
@@ -86,9 +84,6 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
   try {
     const categoryRef = doc(db, CATEGORIES_COLLECTION, categoryId);
     await deleteDoc(categoryRef);
-    // Note: Deleting associated price data from Firestore would require more complex logic
-    // (querying for all price documents with this categoryId and deleting them).
-    // This is not implemented here for simplicity in this step.
     return true;
   } catch (error) {
     console.error("Error deleting category from Firestore:", error);
@@ -96,63 +91,6 @@ export const deleteFirebaseCategory = async (categoryId: string): Promise<boolea
   }
 };
 
-
-// == Local In-Memory Data (FURNITURE_CATEGORIES is now primarily a fallback or for initial seeding ideas) ==
-// The estimator and admin panel will fetch categories from Firestore.
-export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
-  {
-    id: 'sofas',
-    name: 'Sofas',
-    iconName: 'Sofa',
-    imagePlaceholder: 'https://placehold.co/400x300.png',
-    imageAiHint: 'living room sofa',
-    features: [
-      {
-        id: 'sofas-feat-seats',
-        name: 'Number of Seats',
-        selectionType: 'single',
-        options: [
-          { id: 'sofas-feat-seats-opt-2', label: '2-Seater', iconName: 'Users', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'small sofa' },
-          { id: 'sofas-feat-seats-opt-3', label: '3-Seater', iconName: 'Users', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'medium sofa' },
-          { id: 'sofas-feat-seats-opt-sectional', label: 'Sectional', iconName: 'GalleryVerticalEnd', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'large sofa' },
-        ],
-      },
-      {
-        id: 'sofas-feat-material',
-        name: 'Upholstery Material',
-        selectionType: 'single',
-        options: [
-          { id: 'sofas-feat-material-opt-fabric', label: 'Fabric', iconName: 'GalleryThumbnails', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'fabric texture' },
-          { id: 'sofas-feat-material-opt-leather', label: 'Leather', iconName: 'Option', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'leather texture' },
-          { id: 'sofas-feat-material-opt-velvet', label: 'Velvet', iconName: 'Sparkles', imagePlaceholder: 'https://placehold.co/50x50.png', imageAiHint: 'velvet texture' },
-        ],
-      },
-      {
-        id: 'sofas-feat-style',
-        name: 'Style',
-        selectionType: 'multiple',
-        options: [
-          { id: 'sofas-feat-style-opt-modern', label: 'Modern', iconName: 'Zap', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'modern sofa' },
-          { id: 'sofas-feat-style-opt-traditional', label: 'Traditional', iconName: 'Grape', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'classic sofa' },
-          { id: 'sofas-feat-style-opt-midcentury', label: 'Mid-Century', iconName: 'Sun', imagePlaceholder: 'https://placehold.co/100x75.png', imageAiHint: 'retro sofa' },
-        ],
-      },
-    ],
-    sizes: [
-      { id: 'sofas-size-small', label: 'Small (50-69 inches)', iconName: 'Minimize2', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'compact furniture' },
-      { id: 'sofas-size-medium', label: 'Medium (70-85 inches)', iconName: 'AppWindow', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'standard furniture' },
-      { id: 'sofas-size-large', label: 'Large (86+ inches)', iconName: 'Maximize2', imagePlaceholder: 'https://placehold.co/80x60.png', imageAiHint: 'spacious furniture' },
-    ],
-  },
-  // ... other default categories (can be removed if Firestore is source of truth and seeded)
-];
-
-// PRICE_DATA is now managed in Firestore. This array is no longer the source of truth.
-/*
-export let PRICE_DATA: PriceDataEntry[] = [
-  // ... (old price data commented out)
-];
-*/
 
 // == Pricing and Description Logic ==
 
@@ -172,12 +110,15 @@ export async function getEstimatedPrice(
     const priceDocSnap = await getDoc(priceDocRef);
 
     if (priceDocSnap.exists()) {
-      const priceRange = priceDocSnap.data() as PriceRange; // Price doc only stores PriceRange
+      const data = priceDocSnap.data();
+      // Document stores { priceRange: PriceRange, overrideImageUrl?: string, overrideImageAiHint?: string }
       return {
         categoryId,
-        featureSelections: featureSelectionsFromUser, // Return the user's selections for context
+        featureSelections: featureSelectionsFromUser,
         sizeId,
-        priceRange,
+        priceRange: data.priceRange as PriceRange,
+        overrideImageUrl: data.overrideImageUrl as string | undefined,
+        overrideImageAiHint: data.overrideImageAiHint as string | undefined,
       };
     } else {
       return null; // No price found for this specific combination
@@ -200,7 +141,6 @@ export function generateItemDescription(
   let description = category.name;
   const featureParts: string[] = [];
 
-  // Ensure features array exists before iterating
   (category.features || []).forEach(featureConfig => {
     const selectedValue = selections.featureSelections[featureConfig.id];
     if (selectedValue) {
@@ -238,7 +178,7 @@ export function generateItemDescription(
 export function getFinalImageForSelections(
   selections: UserSelections,
   allCategoriesData: FurnitureCategory[]
-): { finalImageUrl: string; finalImageAiHint: string } { // Ensure non-null return
+): { finalImageUrl: string; finalImageAiHint: string } {
   const defaultImage = 'https://placehold.co/400x300.png';
   const defaultHint = 'furniture item';
 
@@ -250,7 +190,6 @@ export function getFinalImageForSelections(
   let finalImageUrl = category.imagePlaceholder || defaultImage;
   let finalImageAiHint = category.imageAiHint || category.name.toLowerCase() || defaultHint;
   
-  // Prioritize size image if available
   if (selections.sizeId) {
     const sizeConfig = (category.sizes || []).find(s => s.id === selections.sizeId);
     if (sizeConfig?.imagePlaceholder) {
@@ -259,17 +198,16 @@ export function getFinalImageForSelections(
     }
   }
   
-  // Then, prioritize feature option image if available (takes precedence over size if more specific)
   for (const feature of (category.features || [])) {
     const selectedValue = selections.featureSelections[feature.id];
     if (selectedValue) {
       const firstSelectedOptionId = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
-      if (firstSelectedOptionId) { // Check if there's actually a selection
+      if (firstSelectedOptionId) {
         const option = (feature.options || []).find(opt => opt.id === firstSelectedOptionId);
         if (option?.imagePlaceholder) {
           finalImageUrl = option.imagePlaceholder;
           finalImageAiHint = option.imageAiHint || option.label.toLowerCase();
-          break; // Take the first feature option image found
+          break; 
         }
       }
     }
@@ -304,14 +242,13 @@ export async function getAllPossibleCombinationsWithPrices(
       const feature = (category.features || [])[featureIndex];
       let permutations: Record<string, string | string[]>[] = [];
 
-      if ((feature.options || []).length === 0 && (category.features || []).length > 0) { // If a feature has no options, skip it for permutations unless it's the ONLY feature path
+      if ((feature.options || []).length === 0 && (category.features || []).length > 0) {
          return generateFeaturePermutations(featureIndex + 1, currentSelections);
       }
       
       if (feature.selectionType === 'multiple') {
         const optionSubsets = getPowerSet((feature.options || []).map(opt => opt.id));
         optionSubsets.forEach(subset => {
-            // Only consider non-empty subsets as valid selections for multi-select features IF they have options
             if (subset.length > 0 || (feature.options || []).length === 0) {
                  const nextSelections = {
                     ...currentSelections,
@@ -320,27 +257,13 @@ export async function getAllPossibleCombinationsWithPrices(
                 permutations = permutations.concat(
                     generateFeaturePermutations(featureIndex + 1, nextSelections)
                 );
-            } else if ( (feature.options || []).length > 0 && subset.length === 0){
-                // If a multi-select feature has options, an empty selection is not a valid path to price, so skip
-                // unless we want to price "base model with no multi-select options chosen"
             }
         });
-         // If no options were selected for a multi-select (and it had options),
-         // we might still want to generate a path for the "base" version without this feature selected.
-         // This is tricky. For now, if options exist, one must be picked via powerset.
-         // If the powerset for a feature with options results in no permutations (e.g. only empty set and we filter it out),
-         // we should ensure we still proceed.
          if (permutations.length === 0 && (feature.options || []).length > 0) {
-            // This case suggests we might want a "none selected" path for a multi-select feature,
-            // but current logic (getPowerSet includes empty set) means this branch might not be hit if handled above.
-            // Let's ensure we always call next permutation if it's a multi-select feature,
-            // even if it results in currentSelections not having this featureId.
              permutations = permutations.concat(generateFeaturePermutations(featureIndex + 1, currentSelections));
          }
-
-
-      } else { // Single-select
-        if ((feature.options || []).length === 0) { // No options for single-select, just proceed
+      } else { 
+        if ((feature.options || []).length === 0) {
             permutations = permutations.concat(
                 generateFeaturePermutations(featureIndex + 1, currentSelections)
             );
@@ -361,11 +284,11 @@ export async function getAllPossibleCombinationsWithPrices(
 
     const featurePermutations: Record<string, string | string[]>[] = (category.features || []).length > 0
       ? generateFeaturePermutations(0, {})
-      : [{}]; // If no features, there's one "permutation" (empty selections)
+      : [{}]; 
 
-    if ((category.sizes || []).length === 0) continue; // A category must have sizes to be priceable
+    if ((category.sizes || []).length === 0) continue; 
 
-    const sizesToIterate = category.sizes; // Already checked above
+    const sizesToIterate = category.sizes;
 
     for (const size of sizesToIterate) {
       for (const currentFeatureSelections of featurePermutations) {
@@ -377,7 +300,18 @@ export async function getAllPossibleCombinationsWithPrices(
         
         const fullDescription = generateItemDescription(userSelections, categoriesFromFirestore);
         const existingPriceEntry = await getEstimatedPrice(category.id, currentFeatureSelections, size.id, categoriesFromFirestore);
-        const { finalImageUrl, finalImageAiHint } = getFinalImageForSelections(userSelections, categoriesFromFirestore);
+        
+        let displayImageUrl: string;
+        let displayImageAiHint: string;
+
+        if (existingPriceEntry?.overrideImageUrl) {
+          displayImageUrl = existingPriceEntry.overrideImageUrl;
+          displayImageAiHint = existingPriceEntry.overrideImageAiHint || category.name.toLowerCase();
+        } else {
+          const derivedImage = getFinalImageForSelections(userSelections, categoriesFromFirestore);
+          displayImageUrl = derivedImage.finalImageUrl;
+          displayImageAiHint = derivedImage.finalImageAiHint;
+        }
         
         const featureParts: string[] = [];
         (category.features || []).forEach(fConf => {
@@ -385,7 +319,7 @@ export async function getAllPossibleCombinationsWithPrices(
           if (selectedValue) {
             const selectedOptionLabels = (Array.isArray(selectedValue) ? selectedValue : [selectedValue])
               .map(optId => (fConf.options || []).find(o => o.id === optId)?.label)
-              .filter(Boolean) as string[]; // Filter out undefined/empty labels and assert as string[]
+              .filter(Boolean) as string[];
             if (selectedOptionLabels.length > 0) {
               featureParts.push(`${fConf.name}: ${selectedOptionLabels.join(' & ')}`);
             }
@@ -403,8 +337,10 @@ export async function getAllPossibleCombinationsWithPrices(
           priceRange: existingPriceEntry ? existingPriceEntry.priceRange : { min: 0, max: 0 },
           description: fullDescription,
           isPriced: !!existingPriceEntry,
-          imageUrl: finalImageUrl,
-          imageAiHint: finalImageAiHint,
+          imageUrl: displayImageUrl,
+          imageAiHint: displayImageAiHint,
+          overrideImageUrl: existingPriceEntry?.overrideImageUrl,
+          overrideImageAiHint: existingPriceEntry?.overrideImageAiHint,
         });
       }
     }
@@ -412,11 +348,9 @@ export async function getAllPossibleCombinationsWithPrices(
   return allCombinations;
 }
 
-
-// updateOrAddPriceData now writes to Firestore.
 export async function updateOrAddPriceData(
   entry: PriceDataEntry,
-  _categoriesFromFirestore: FurnitureCategory[] // _categoriesFromFirestore might not be needed if IDs are globally unique
+  _categoriesFromFirestore: FurnitureCategory[]
 ): Promise<PriceDataEntry | null> {
   if (entry.priceRange.min < 0 || entry.priceRange.max < 0 || entry.priceRange.min > entry.priceRange.max) {
     console.error("Invalid price range for update/add:", entry.priceRange);
@@ -427,10 +361,27 @@ export async function updateOrAddPriceData(
 
   try {
     const priceDocRef = doc(db, PRICES_COLLECTION, priceDocId);
-    // Only store the priceRange object in Firestore document.
-    // The ID itself contains all the selection criteria.
-    await setDoc(priceDocRef, entry.priceRange); 
-    return entry; // Return the original entry to confirm what was intended to be saved.
+    const dataToSave: {
+      priceRange: PriceRange;
+      overrideImageUrl?: string;
+      overrideImageAiHint?: string;
+    } = {
+      priceRange: entry.priceRange,
+    };
+
+    if (entry.overrideImageUrl) {
+      dataToSave.overrideImageUrl = entry.overrideImageUrl;
+      dataToSave.overrideImageAiHint = entry.overrideImageAiHint || '';
+    } else {
+      // If overrideImageUrl is explicitly set to empty or null, ensure it's removed from Firestore.
+      // Firestore treats undefined fields as "do not change" in merge, but null/empty will remove.
+      // To be safe, we can explicitly set them to null if they are meant to be cleared.
+      dataToSave.overrideImageUrl = ''; // Or use deleteField() if you want to remove the field entirely
+      dataToSave.overrideImageAiHint = '';
+    }
+    
+    await setDoc(priceDocRef, dataToSave, { merge: true }); // Use merge to avoid overwriting other fields if any
+    return entry;
   } catch (error) {
     console.error("Error saving price to Firestore:", error);
     return null;

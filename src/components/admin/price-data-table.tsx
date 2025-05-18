@@ -6,14 +6,15 @@ import type { PriceDataEntry, DisplayablePriceEntry as DisplayablePriceEntryType
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
-import Image from 'next/image'; // Import next/image
+import { Save, ImageUp } from 'lucide-react'; // Added ImageUp
+import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { getCanonicalFeatureValue } from '@/lib/furniture-data'; 
 
 interface PriceDataTableProps {
   priceEntries: DisplayablePriceEntryType[];
-  onSavePrice: (entry: PriceDataEntry) => void;
+  onSavePrice: (entry: PriceDataEntry, overrideImageUrl?: string, overrideImageAiHint?: string) => void;
+  onEditImage: (entry: DisplayablePriceEntryType) => void; // Callback to open image edit dialog
 }
 
 const createEntryKey = (entry: DisplayablePriceEntryType): string => {
@@ -24,7 +25,7 @@ const createEntryKey = (entry: DisplayablePriceEntryType): string => {
   return `${entry.categoryId}|${featuresKey}|${entry.sizeId}`;
 };
 
-export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataTableProps) {
+export default function PriceDataTable({ priceEntries, onSavePrice, onEditImage }: PriceDataTableProps) {
   const [editablePrices, setEditablePrices] = useState<Record<string, { min: string; max: string }>>({});
   const { toast } = useToast();
 
@@ -66,16 +67,17 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
       return;
     }
     
+    // Pass existing override image data if not changed by image dialog
     onSavePrice({
       categoryId: entry.categoryId,
       featureSelections: entry.featureSelections, 
       sizeId: entry.sizeId,
       priceRange: { min: minPrice, max: maxPrice },
-    });
+    }, entry.overrideImageUrl, entry.overrideImageAiHint); // Pass existing overrides
   }, [editablePrices, onSavePrice, toast]);
   
   if (priceEntries.length === 0) {
-    return <p className="text-muted-foreground text-center py-4">No priceable combinations found. Ensure categories have sizes. If categories have features, they must also have options.</p>;
+    return <p className="text-muted-foreground text-center py-4">No priceable combinations found.</p>;
   }
 
   return (
@@ -88,7 +90,7 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
           <TableHead className="sticky top-0 bg-card z-10 min-w-[120px] whitespace-nowrap">Size</TableHead>
           <TableHead className="sticky top-0 bg-card z-10 w-[110px] min-w-[110px] whitespace-nowrap">Min Price</TableHead>
           <TableHead className="sticky top-0 bg-card z-10 w-[110px] min-w-[110px] whitespace-nowrap">Max Price</TableHead>
-          <TableHead className="sticky top-0 bg-card z-10 text-right w-[110px] min-w-[110px] whitespace-nowrap">Actions</TableHead>
+          <TableHead className="sticky top-0 bg-card z-10 text-right w-[180px] min-w-[180px] whitespace-nowrap">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -104,7 +106,7 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
               <TableCell className="whitespace-nowrap">
                 <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-md border overflow-hidden bg-muted">
                   <Image
-                    src={entry.imageUrl}
+                    src={entry.imageUrl} // This now correctly uses override or derived
                     alt={`Image for ${entry.categoryName} - ${entry.featureDescription} - ${entry.sizeLabel}`}
                     fill
                     style={{ objectFit: 'contain' }}
@@ -139,7 +141,10 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
                   step="0.01"
                 />
               </TableCell>
-              <TableCell className="text-right whitespace-nowrap">
+              <TableCell className="text-right whitespace-nowrap space-x-1">
+                <Button variant="outline" size="icon" onClick={() => onEditImage(entry)} title="Edit Combination Image">
+                  <ImageUp className="h-4 w-4" />
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => handleSave(entry)}>
                   <Save className="mr-1 h-3 w-3" /> {entry.isPriced ? 'Save' : 'Add'}
                 </Button>

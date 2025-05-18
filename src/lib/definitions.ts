@@ -1,3 +1,4 @@
+
 import type { LucideIcon } from 'lucide-react';
 
 export interface PriceRange {
@@ -43,6 +44,8 @@ export interface PriceDataEntry {
   featureSelections: Record<string, string | string[]>; // { featureId: optionId or optionId[] }
   sizeId: string;
   priceRange: PriceRange;
+  overrideImageUrl?: string; // Optional: Data URI for specific combination image
+  overrideImageAiHint?: string; // Optional: AI hint for the override image
 }
 
 export type UserSelections = {
@@ -63,13 +66,17 @@ export interface EstimationRecord {
 }
 
 // For displaying price entries in the admin panel, including combinations that might not have a price yet.
-export interface DisplayablePriceEntry extends Omit<PriceDataEntry, 'featureSelections'> {
+export interface DisplayablePriceEntry extends Omit<PriceDataEntry, 'featureSelections' | 'priceRange' | 'overrideImageUrl' | 'overrideImageAiHint'> {
   featureSelections: Record<string, string | string[]>; 
+  priceRange: PriceRange; // Ensure priceRange is here
   description: string; 
   isPriced: boolean; 
   categoryName: string; 
   featureDescription: string; 
   sizeLabel: string; 
-  imageUrl: string; // URL or Data URI for the representative image of the combination
-  imageAiHint: string; // AI hint for the representative image
+  imageUrl: string; // This will be the final URL to display (override or derived)
+  imageAiHint: string; // Final AI hint
+  overrideImageUrl?: string; // Direct override image Data URI
+  overrideImageAiHint?: string; // AI hint for the override image
 }
+
