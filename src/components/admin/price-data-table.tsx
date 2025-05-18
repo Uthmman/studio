@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -6,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Save } from 'lucide-react';
-// ScrollArea removed
+import Image from 'next/image'; // Import next/image
 import { useToast } from '@/hooks/use-toast';
 import { getCanonicalFeatureValue } from '@/lib/furniture-data'; 
 
@@ -77,12 +78,11 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
     return <p className="text-muted-foreground text-center py-4">No priceable combinations found. Ensure categories have sizes. If categories have features, they must also have options.</p>;
   }
 
-  // Removed ScrollArea wrapper. The Table component has its own overflow handling.
-  // The parent div in AdminFurniturePage will manage overall scroll constraints (max-height, overflow-x).
   return (
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="sticky top-0 bg-card z-10 min-w-[100px] whitespace-nowrap">Image</TableHead>
           <TableHead className="sticky top-0 bg-card z-10 min-w-[150px] whitespace-nowrap">Category</TableHead>
           <TableHead className="sticky top-0 bg-card z-10 min-w-[250px] whitespace-nowrap">Features</TableHead>
           <TableHead className="sticky top-0 bg-card z-10 min-w-[120px] whitespace-nowrap">Size</TableHead>
@@ -101,8 +101,21 @@ export default function PriceDataTable({ priceEntries, onSavePrice }: PriceDataT
               className={!entry.isPriced ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'}
               data-testid={`price-row-${key}`}
             >
+              <TableCell className="whitespace-nowrap">
+                <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-md border overflow-hidden bg-muted">
+                  <Image
+                    src={entry.imageUrl}
+                    alt={`Image for ${entry.categoryName} - ${entry.featureDescription} - ${entry.sizeLabel}`}
+                    fill
+                    style={{ objectFit: 'contain' }}
+                    sizes="(max-width: 640px) 50vw, 20vw"
+                    data-ai-hint={entry.imageAiHint}
+                    className="p-1"
+                  />
+                </div>
+              </TableCell>
               <TableCell className="font-medium whitespace-nowrap">{entry.categoryName}</TableCell>
-              <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{entry.featureDescription}</TableCell>
+              <TableCell className="text-sm text-muted-foreground whitespace-pre-wrap break-words max-w-xs">{entry.featureDescription}</TableCell>
               <TableCell className="text-sm whitespace-nowrap">{entry.sizeLabel}</TableCell>
               <TableCell className="whitespace-nowrap">
                 <Input

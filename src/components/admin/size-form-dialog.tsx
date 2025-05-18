@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FurnitureSizeConfig } from "@/lib/definitions";
@@ -33,6 +34,8 @@ interface SizeFormDialogProps {
   categoryName: string;
 }
 
+const DEFAULT_SIZE_PLACEHOLDER = "https://placehold.co/80x80.png";
+
 export default function SizeFormDialog({
   isOpen,
   onClose,
@@ -51,10 +54,10 @@ export default function SizeFormDialog({
       ? { 
           label: initialData.label, 
           iconName: initialData.iconName || "",
-          imagePlaceholder: initialData.imagePlaceholder || "https://picsum.photos/80/80",
+          imagePlaceholder: initialData.imagePlaceholder || DEFAULT_SIZE_PLACEHOLDER,
           imageAiHint: initialData.imageAiHint || "",
         } 
-      : { label: "", iconName: "", imagePlaceholder: "https://picsum.photos/80/80", imageAiHint: "" },
+      : { label: "", iconName: "", imagePlaceholder: DEFAULT_SIZE_PLACEHOLDER, imageAiHint: "" },
   });
 
   React.useEffect(() => {
@@ -63,10 +66,10 @@ export default function SizeFormDialog({
         ? { 
             label: initialData.label, 
             iconName: initialData.iconName || "",
-            imagePlaceholder: initialData.imagePlaceholder || "https://picsum.photos/80/80",
+            imagePlaceholder: initialData.imagePlaceholder || DEFAULT_SIZE_PLACEHOLDER,
             imageAiHint: initialData.imageAiHint || "",
           } 
-        : { label: "", iconName: "", imagePlaceholder: "https://picsum.photos/80/80", imageAiHint: "" };
+        : { label: "", iconName: "", imagePlaceholder: DEFAULT_SIZE_PLACEHOLDER, imageAiHint: "" };
       reset(defaultVals);
     }
   }, [initialData, reset, isOpen]);
@@ -74,7 +77,7 @@ export default function SizeFormDialog({
   const handleFormSubmit = (data: SizeFormData) => {
     const submissionData = {
         ...data,
-        imagePlaceholder: data.imagePlaceholder || "https://picsum.photos/80/80",
+        imagePlaceholder: data.imagePlaceholder || DEFAULT_SIZE_PLACEHOLDER,
         imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0,2).join(" "),
     };
     onSubmit(submissionData, initialData?.id);
@@ -91,7 +94,7 @@ export default function SizeFormDialog({
             {initialData ? "Edit" : "Add"} Size for {categoryName}
           </DialogTitle>
           <DialogDescription>
-            Define a size option for this furniture category, including visual details.
+            Define a size option for this furniture category, including visual details. Use placehold.co for image URLs.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -128,7 +131,7 @@ export default function SizeFormDialog({
             <Input
               id="sizeImagePlaceholder"
               {...register("imagePlaceholder")}
-              placeholder="https://picsum.photos/80/80"
+              placeholder={DEFAULT_SIZE_PLACEHOLDER}
               className={errors.imagePlaceholder ? "border-destructive" : ""}
             />
             {errors.imagePlaceholder && (
@@ -136,6 +139,7 @@ export default function SizeFormDialog({
                 {errors.imagePlaceholder.message}
               </p>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Default: {DEFAULT_SIZE_PLACEHOLDER}</p>
           </div>
           <div>
             <Label htmlFor="sizeImageAiHint">Image AI Hint (max 2 words)</Label>

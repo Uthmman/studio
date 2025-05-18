@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { FurnitureFeatureOption } from "@/lib/definitions";
@@ -33,6 +34,8 @@ interface FeatureOptionFormProps {
   featureName: string;
 }
 
+const DEFAULT_FEATURE_OPTION_PLACEHOLDER = "https://placehold.co/50x50.png";
+
 export default function FeatureOptionForm({
   isOpen,
   onClose,
@@ -51,10 +54,10 @@ export default function FeatureOptionForm({
       ? { 
           label: initialData.label,
           iconName: initialData.iconName || "",
-          imagePlaceholder: initialData.imagePlaceholder || "https://picsum.photos/50/50",
+          imagePlaceholder: initialData.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
           imageAiHint: initialData.imageAiHint || "",
         } 
-      : { label: "", iconName: "", imagePlaceholder: "https://picsum.photos/50/50", imageAiHint: "" },
+      : { label: "", iconName: "", imagePlaceholder: DEFAULT_FEATURE_OPTION_PLACEHOLDER, imageAiHint: "" },
   });
 
   React.useEffect(() => {
@@ -63,10 +66,10 @@ export default function FeatureOptionForm({
         ? { 
             label: initialData.label,
             iconName: initialData.iconName || "",
-            imagePlaceholder: initialData.imagePlaceholder || "https://picsum.photos/50/50",
+            imagePlaceholder: initialData.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
             imageAiHint: initialData.imageAiHint || "",
           } 
-        : { label: "", iconName: "", imagePlaceholder: "https://picsum.photos/50/50", imageAiHint: "" };
+        : { label: "", iconName: "", imagePlaceholder: DEFAULT_FEATURE_OPTION_PLACEHOLDER, imageAiHint: "" };
       reset(defaultVals);
     }
   }, [initialData, reset, isOpen]);
@@ -74,7 +77,7 @@ export default function FeatureOptionForm({
   const handleFormSubmit = (data: OptionFormData) => {
     const submissionData = {
         ...data,
-        imagePlaceholder: data.imagePlaceholder || "https://picsum.photos/50/50",
+        imagePlaceholder: data.imagePlaceholder || DEFAULT_FEATURE_OPTION_PLACEHOLDER,
         imageAiHint: data.imageAiHint || data.label.toLowerCase().split(" ").slice(0,2).join(" "),
     };
     onSubmit(submissionData, initialData?.id);
@@ -91,7 +94,7 @@ export default function FeatureOptionForm({
             {initialData ? "Edit" : "Add"} Option for {featureName}
           </DialogTitle>
           <DialogDescription>
-            Define an option for the feature, including visual details.
+            Define an option for the feature, including visual details. Use placehold.co for image URLs.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 py-4">
@@ -128,7 +131,7 @@ export default function FeatureOptionForm({
             <Input
               id="imagePlaceholder"
               {...register("imagePlaceholder")}
-              placeholder="https://picsum.photos/50/50"
+              placeholder={DEFAULT_FEATURE_OPTION_PLACEHOLDER}
               className={errors.imagePlaceholder ? "border-destructive" : ""}
             />
             {errors.imagePlaceholder && (
@@ -136,6 +139,7 @@ export default function FeatureOptionForm({
                 {errors.imagePlaceholder.message}
               </p>
             )}
+            <p className="text-xs text-muted-foreground mt-1">Default: {DEFAULT_FEATURE_OPTION_PLACEHOLDER}</p>
           </div>
            <div>
             <Label htmlFor="imageAiHint">Image AI Hint (max 2 words)</Label>

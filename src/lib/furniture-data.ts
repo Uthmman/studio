@@ -148,7 +148,6 @@ export let FURNITURE_CATEGORIES: FurnitureCategory[] = [
 ];
 
 // PRICE_DATA is now managed in Firestore. This array is no longer the source of truth.
-// It's kept here for reference or potential one-time seeding scripts.
 /*
 export let PRICE_DATA: PriceDataEntry[] = [
   // ... (old price data commented out)
@@ -173,7 +172,7 @@ export async function getEstimatedPrice(
     const priceDocSnap = await getDoc(priceDocRef);
 
     if (priceDocSnap.exists()) {
-      const priceRange = priceDocSnap.data() as PriceRange;
+      const priceRange = priceDocSnap.data() as PriceRange; // Price doc only stores PriceRange
       return {
         categoryId,
         featureSelections: featureSelectionsFromUser, // Return the user's selections for context
@@ -239,18 +238,19 @@ export function generateItemDescription(
 export function getFinalImageForSelections(
   selections: UserSelections,
   allCategoriesData: FurnitureCategory[]
-): { finalImageUrl: string | null; finalImageAiHint: string | null } {
-  if (!selections.categoryId) return { finalImageUrl: null, finalImageAiHint: null };
+): { finalImageUrl: string; finalImageAiHint: string } { // Ensure non-null return
+  const defaultImage = 'https://placehold.co/400x300.png';
+  const defaultHint = 'furniture item';
+
+  if (!selections.categoryId) return { finalImageUrl: defaultImage, finalImageAiHint: defaultHint };
 
   const category = allCategoriesData.find(c => c.id === selections.categoryId);
-  const defaultImage = 'https://placehold.co/400x300.png';
-  const defaultHint = 'furniture';
-
   if (!category) return { finalImageUrl: defaultImage, finalImageAiHint: defaultHint };
 
   let finalImageUrl = category.imagePlaceholder || defaultImage;
   let finalImageAiHint = category.imageAiHint || category.name.toLowerCase() || defaultHint;
   
+  // Prioritize size image if available
   if (selections.sizeId) {
     const sizeConfig = (category.sizes || []).find(s => s.id === selections.sizeId);
     if (sizeConfig?.imagePlaceholder) {
@@ -259,16 +259,17 @@ export function getFinalImageForSelections(
     }
   }
   
+  // Then, prioritize feature option image if available (takes precedence over size if more specific)
   for (const feature of (category.features || [])) {
     const selectedValue = selections.featureSelections[feature.id];
     if (selectedValue) {
       const firstSelectedOptionId = Array.isArray(selectedValue) ? selectedValue[0] : selectedValue;
-      if (firstSelectedOptionId) {
+      if (firstSelectedOptionId) { // Check if there's actually a selection
         const option = (feature.options || []).find(opt => opt.id === firstSelectedOptionId);
         if (option?.imagePlaceholder) {
           finalImageUrl = option.imagePlaceholder;
           finalImageAiHint = option.imageAiHint || option.label.toLowerCase();
-          break; 
+          break; // Take the first feature option image found
         }
       }
     }
@@ -303,42 +304,68 @@ export async function getAllPossibleCombinationsWithPrices(
       const feature = (category.features || [])[featureIndex];
       let permutations: Record<string, string | string[]>[] = [];
 
-      if ((feature.options || []).length === 0) {
-        return generateFeaturePermutations(featureIndex + 1, currentSelections);
+      if ((feature.options || []).length === 0 && (category.features || []).length > 0) { // If a feature has no options, skip it for permutations unless it's the ONLY feature path
+         return generateFeaturePermutations(featureIndex + 1, currentSelections);
       }
-
+      
       if (feature.selectionType === 'multiple') {
         const optionSubsets = getPowerSet((feature.options || []).map(opt => opt.id));
         optionSubsets.forEach(subset => {
-            const nextSelections = {
-                ...currentSelections,
-                ...(subset.length > 0 && { [feature.id]: subset.sort() }) 
-            };
+            // Only consider non-empty subsets as valid selections for multi-select features IF they have options
+            if (subset.length > 0 || (feature.options || []).length === 0) {
+                 const nextSelections = {
+                    ...currentSelections,
+                    ...(subset.length > 0 && { [feature.id]: subset.sort() }) 
+                };
+                permutations = permutations.concat(
+                    generateFeaturePermutations(featureIndex + 1, nextSelections)
+                );
+            } else if ( (feature.options || []).length > 0 && subset.length === 0){
+                // If a multi-select feature has options, an empty selection is not a valid path to price, so skip
+                // unless we want to price "base model with no multi-select options chosen"
+            }
+        });
+         // If no options were selected for a multi-select (and it had options),
+         // we might still want to generate a path for the "base" version without this feature selected.
+         // This is tricky. For now, if options exist, one must be picked via powerset.
+         // If the powerset for a feature with options results in no permutations (e.g. only empty set and we filter it out),
+         // we should ensure we still proceed.
+         if (permutations.length === 0 && (feature.options || []).length > 0) {
+            // This case suggests we might want a "none selected" path for a multi-select feature,
+            // but current logic (getPowerSet includes empty set) means this branch might not be hit if handled above.
+            // Let's ensure we always call next permutation if it's a multi-select feature,
+            // even if it results in currentSelections not having this featureId.
+             permutations = permutations.concat(generateFeaturePermutations(featureIndex + 1, currentSelections));
+         }
+
+
+      } else { // Single-select
+        if ((feature.options || []).length === 0) { // No options for single-select, just proceed
             permutations = permutations.concat(
-                generateFeaturePermutations(featureIndex + 1, nextSelections)
+                generateFeaturePermutations(featureIndex + 1, currentSelections)
             );
-        });
-      } else { 
-        (feature.options || []).forEach(option => {
-          const nextSelections = {
-            ...currentSelections,
-            [feature.id]: option.id,
-          };
-          permutations = permutations.concat(
-            generateFeaturePermutations(featureIndex + 1, nextSelections)
-          );
-        });
+        } else {
+            (feature.options || []).forEach(option => {
+              const nextSelections = {
+                ...currentSelections,
+                [feature.id]: option.id,
+              };
+              permutations = permutations.concat(
+                generateFeaturePermutations(featureIndex + 1, nextSelections)
+              );
+            });
+        }
       }
       return permutations;
     };
 
     const featurePermutations: Record<string, string | string[]>[] = (category.features || []).length > 0
       ? generateFeaturePermutations(0, {})
-      : [{}];
+      : [{}]; // If no features, there's one "permutation" (empty selections)
 
-    if ((category.sizes || []).length === 0 && (category.features || []).length > 0) continue; 
+    if ((category.sizes || []).length === 0) continue; // A category must have sizes to be priceable
 
-    const sizesToIterate = (category.sizes || []).length > 0 ? category.sizes : [{id: 'default-size', label:'Standard'} as FurnitureSizeConfig];
+    const sizesToIterate = category.sizes; // Already checked above
 
     for (const size of sizesToIterate) {
       for (const currentFeatureSelections of featurePermutations) {
@@ -349,8 +376,8 @@ export async function getAllPossibleCombinationsWithPrices(
         };
         
         const fullDescription = generateItemDescription(userSelections, categoriesFromFirestore);
-        // getEstimatedPrice is now async
         const existingPriceEntry = await getEstimatedPrice(category.id, currentFeatureSelections, size.id, categoriesFromFirestore);
+        const { finalImageUrl, finalImageAiHint } = getFinalImageForSelections(userSelections, categoriesFromFirestore);
         
         const featureParts: string[] = [];
         (category.features || []).forEach(fConf => {
@@ -358,13 +385,13 @@ export async function getAllPossibleCombinationsWithPrices(
           if (selectedValue) {
             const selectedOptionLabels = (Array.isArray(selectedValue) ? selectedValue : [selectedValue])
               .map(optId => (fConf.options || []).find(o => o.id === optId)?.label)
-              .filter(Boolean) as string[];
+              .filter(Boolean) as string[]; // Filter out undefined/empty labels and assert as string[]
             if (selectedOptionLabels.length > 0) {
               featureParts.push(`${fConf.name}: ${selectedOptionLabels.join(' & ')}`);
             }
           }
         });
-        const featureDescription = featureParts.join(', ') || ((category.features || []).length > 0 ? 'Base Model' : 'N/A');
+        const featureDescription = featureParts.join(', ') || (((category.features || []).length > 0) ? 'Base Configuration' : 'N/A');
         
         allCombinations.push({
           categoryId: category.id,
@@ -376,6 +403,8 @@ export async function getAllPossibleCombinationsWithPrices(
           priceRange: existingPriceEntry ? existingPriceEntry.priceRange : { min: 0, max: 0 },
           description: fullDescription,
           isPriced: !!existingPriceEntry,
+          imageUrl: finalImageUrl,
+          imageAiHint: finalImageAiHint,
         });
       }
     }
@@ -407,5 +436,3 @@ export async function updateOrAddPriceData(
     return null;
   }
 }
-
-    

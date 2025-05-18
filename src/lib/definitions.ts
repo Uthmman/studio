@@ -9,7 +9,7 @@ export interface FurnitureFeatureOption {
   id: string;
   label: string;
   iconName?: string; // Optional: Lucide icon name
-  imagePlaceholder?: string; // Optional: URL for a placeholder image
+  imagePlaceholder?: string; // Optional: URL for a placeholder image or Data URI
   imageAiHint?: string; // Optional: AI hint for the image
 }
 
@@ -24,7 +24,7 @@ export interface FurnitureSizeConfig {
   id: string;
   label: string;
   iconName?: string; // Optional: Lucide icon name
-  imagePlaceholder?: string; // Optional: URL for a placeholder image
+  imagePlaceholder?: string; // Optional: URL for a placeholder image or Data URI
   imageAiHint?: string; // Optional: AI hint for the image
 }
 
@@ -34,7 +34,7 @@ export interface FurnitureCategory {
   iconName: string; 
   features: FurnitureFeatureConfig[];
   sizes: FurnitureSizeConfig[];
-  imagePlaceholder: string;
+  imagePlaceholder: string; // Can be a URL or a Data URI
   imageAiHint: string;
 }
 
@@ -64,10 +64,12 @@ export interface EstimationRecord {
 
 // For displaying price entries in the admin panel, including combinations that might not have a price yet.
 export interface DisplayablePriceEntry extends Omit<PriceDataEntry, 'featureSelections'> {
-  featureSelections: Record<string, string | string[]>; // Updated for multi-select
-  description: string; // Full human-readable description of the combination
-  isPriced: boolean; // True if a price entry exists for this combination
-  categoryName: string; // Name of the category
-  featureDescription: string; // Description of selected features, e.g., "Material: Wood, Color: Red & Blue"
-  sizeLabel: string; // Label of the selected size
+  featureSelections: Record<string, string | string[]>; 
+  description: string; 
+  isPriced: boolean; 
+  categoryName: string; 
+  featureDescription: string; 
+  sizeLabel: string; 
+  imageUrl: string; // URL or Data URI for the representative image of the combination
+  imageAiHint: string; // AI hint for the representative image
 }
